@@ -8,27 +8,38 @@ import math
 
 
 class Vec3():
+    """
+    A vector of 3 floats.
+
+    Can be used for points, vectors and RGB colours
+    """
     def __init__(self, e0, e1, e2):
         """
+        Initialise a vector from 3 values.
 
+        Args:
+            e0 (float): The first value.
+            e1 (float): The first value.
+            e2 (float): The first value.
         """
+
+        self._validate_value(e0)
+        self._validate_value(e1)
+        self._validate_value(e2)
+
         self._e0 = e0
         self._e1 = e1
         self._e2 = e2
 
-    @classmethod
-    def from_vals(cls, v1, v2, v3):
-        return cls(v1, v2, v3)
-
-    @classmethod
-    def from_vec3(cls, other):
-        if not isinstance(other, cls):
-            raise ValueError("Not a Vec3!")
-        return cls(other._e0, other._e1, other._e2)
-
     def __getitem__(self, key):
         """
+        Allow indexing into the 3 values.
 
+        Args:
+            key (int): The index of the value to get.
+
+        Returns:
+            int: The value for the element at the given index.
         """
         self._validate_key(key)
 
@@ -41,7 +52,11 @@ class Vec3():
 
     def __setitem__(self, key, value):
         """
+        Allow setting one of the 3 values by indexing
 
+        Args:
+            key (int): The index of the value to set.
+            value (float): The value to set.
         """
         self._validate_key(key)
         self._validate_value(value)
@@ -53,6 +68,51 @@ class Vec3():
         else:
             self._e2 = value
 
+    def __add__(self, other):
+        """
+
+        """
+        if isinstance(other, Vec3):
+            return Vec3(
+                self._e0 + other._e0,
+                self._e1 + other._e1,
+                self._e2 + other._e2
+            )
+        else:
+            raise TypeError("Cannot add {other_type} to Vec3".format(
+                other_type=type(other)
+            ))
+
+    def __iadd__(self, other):
+        """
+
+        """
+        if isinstance(other, Vec3):
+            self._e0 += other._e0
+            self._e1 += other._e1
+            self._e2 += other._e2
+            return self
+        else:
+            raise TypeError("Cannot add {other_type} to Vec3".format(
+                other_type=type(other)
+            ))
+
+    def __eq__(self, other):
+        """
+
+        """
+        if isinstance(other, Vec3):
+            tolerance = 0.0001
+            return (
+                abs(self._e0 - other._e0) < tolerance
+                and abs(self._e1 - other._e1) < tolerance
+                and abs(self._e2 - other._e2) < tolerance
+            )
+        else:
+            raise TypeError("Cannot compare {other_type} to Vec3".format(
+                other_type=type(other)
+            ))
+
     def _validate_key(self, key):
         """
 
@@ -63,7 +123,7 @@ class Vec3():
         if key not in (0, 1, 2):
             raise(IndexError("Key is out of range"))
 
-    def _validate_value():
+    def _validate_value(self, value):
         """
 
         """
