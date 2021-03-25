@@ -168,6 +168,90 @@ class Vec3():
                 other_type=type(other)
             ))
 
+    def __mul__(self, other):
+        """
+        Multiply the components of the Vec3 by a scalar value.
+
+        E.g.::
+            newvec = vec * 0.3
+        """
+
+        if not isinstance(other, numbers.Number):
+            raise TypeError(
+                "Cannot multiply a Vec3 by a non scalar value."
+            )
+
+        return Vec3(
+            self._e0 * other,
+            self._e1 * other,
+            self._e2 * other,
+        )
+
+    def __imul__(self, other):
+        """
+        Multiply the components of the Vec3 in place by a scalar value.
+
+        E.g.::
+            vec *= 0.3
+
+        Implementing __imul__ as well as __mul__ because I think it
+        makes it more efficient, a new object isn't assigned in memory,
+        whereas if only __mul__ is implemented, a new object gets
+        created.
+        """
+
+        if not isinstance(other, numbers.Number):
+            raise TypeError(
+                "Cannot multiply a Vec3 by a non scalar value."
+            )
+
+        self._e0 *= other
+        self._e1 *= other
+        self._e2 *= other
+        return self
+
+    def __truediv__(self, other):
+        """
+        Divide the components of the Vec3 by a scalar value.
+
+        E.g.::
+            newvec = vec / 0.3
+        """
+
+        if not isinstance(other, numbers.Number):
+            raise TypeError(
+                "Cannot divide a Vec3 by a non scalar value."
+            )
+
+        return Vec3(
+            self._e0 / other,
+            self._e1 / other,
+            self._e2 / other,
+        )
+
+    def __itruediv__(self, other):
+        """
+        Divide the components of the Vec3 in place by a scalar value.
+
+        E.g.::
+            vec /= 0.3
+
+        Implementing __idiv__ as well as __div__ because I think it
+        makes it more efficient, a new object isn't assigned in memory,
+        whereas if only __div__ is implemented, a new object gets
+        created.
+        """
+
+        if not isinstance(other, numbers.Number):
+            raise TypeError(
+                "Cannot multiply a Vec3 by a non scalar value."
+            )
+
+        self._e0 /= other
+        self._e1 /= other
+        self._e2 /= other
+        return self
+
     def _validate_key(self, key):
         """
         Check if key is valid.

@@ -244,6 +244,191 @@ def test_isub_identity():
 
 @pytest.mark.parametrize("a, b, expected", [
     (
+        Vec3(5, 7, 9),
+        2,
+        Vec3(10, 14, 18),
+    ),
+    (
+        Vec3(0.5, 0.7, 0.9),
+        0.5,
+        Vec3(0.25, 0.35, 0.45),
+    ),
+    (
+        Vec3(1.4, 2.5, 3.6),
+        2,
+        Vec3(2.8, 5, 7.2),
+    ),
+])
+def test_mul(a, b, expected):
+    c = a * b
+    assert vecs_are_equal(c, expected)
+
+
+@pytest.mark.parametrize("a, b", [
+    (
+        Vec3(1, 2, 3),
+        Vec3(4, 5, 6),
+    ),
+    (
+        Vec3(1, 2, 3),
+        "hello",
+    ),
+])
+def test_mul_raises(a, b):
+    with pytest.raises(TypeError):
+        res = a * b
+
+
+@pytest.mark.parametrize("a, b, expected", [
+    (
+        Vec3(5, 7, 9),
+        2,
+        Vec3(10, 14, 18),
+    ),
+    (
+        Vec3(0.5, 0.7, 0.9),
+        0.5,
+        Vec3(0.25, 0.35, 0.45),
+    ),
+    (
+        Vec3(1.4, 2.5, 3.6),
+        2,
+        Vec3(2.8, 5, 7.2),
+    ),
+])
+def test_imul(a, b, expected):
+    a *= b
+    assert vecs_are_equal(a, expected)
+
+
+@pytest.mark.parametrize("a, b", [
+    (
+        Vec3(1, 2, 3),
+        Vec3(3, 4, 5),
+    ),
+    (
+        Vec3(1, 2, 3),
+        "hello",
+    ),
+])
+def test_imul_raises(a, b):
+    with pytest.raises(TypeError):
+        a *= b
+
+
+def test_imul_identity():
+    a = Vec3(1, 2, 3)
+    b = 6
+    orig = id(a)
+    a *= b
+    assert orig == id(a)
+
+
+
+
+
+
+
+
+
+
+@pytest.mark.parametrize("a, b, expected", [
+    (
+        Vec3(5, 7, 9),
+        2,
+        Vec3(2.5, 3.5, 4.5),
+    ),
+    (
+        Vec3(0.5, 0.7, 0.9),
+        0.5,
+        Vec3(1, 1.4, 1.8),
+    ),
+    (
+        Vec3(1.4, 2.5, 3.6),
+        2,
+        Vec3(0.7, 1.25, 1.8),
+    ),
+])
+def test_div(a, b, expected):
+    c = a / b
+    assert vecs_are_equal(c, expected)
+
+
+@pytest.mark.parametrize("a, b", [
+    (
+        Vec3(1, 2, 3),
+        Vec3(4, 5, 6),
+    ),
+    (
+        Vec3(1, 2, 3),
+        "hello",
+    ),
+])
+def test_div_raises(a, b):
+    with pytest.raises(TypeError):
+        res = a / b
+
+
+@pytest.mark.parametrize("a, b, expected", [
+    (
+        Vec3(5, 7, 9),
+        2,
+        Vec3(2.5, 3.5, 4.5),
+    ),
+    (
+        Vec3(0.5, 0.7, 0.9),
+        0.5,
+        Vec3(1, 1.4, 1.8),
+    ),
+    (
+        Vec3(1.4, 2.5, 3.6),
+        2,
+        Vec3(0.7, 1.25, 1.8),
+    ),
+])
+def test_idiv(a, b, expected):
+    a /= b
+    assert vecs_are_equal(a, expected)
+
+
+@pytest.mark.parametrize("a, b", [
+    (
+        Vec3(1, 2, 3),
+        Vec3(3, 4, 5),
+    ),
+    (
+        Vec3(1, 2, 3),
+        "hello",
+    ),
+])
+def test_idiv_raises(a, b):
+    with pytest.raises(TypeError):
+        a /= b
+
+
+def test_idiv_identity():
+    a = Vec3(1, 2, 3)
+    b = 6
+    orig = id(a)
+    a /= b
+    assert orig == id(a)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@pytest.mark.parametrize("a, b, expected", [
+    (
         Vec3(1, 2, 3),
         Vec3(1, 2, 3),
         True
