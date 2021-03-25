@@ -382,3 +382,107 @@ class Vec3():
             float: The length of the Vec3 squared.
         """
         return (self._e0 ** 2) + (self._e1 ** 2) + (self._e2 ** 2)
+
+    def dot(self, other):
+        """
+        Calculate dot product between this and another Vec3.
+
+        The result of the dot product is equal to:
+         - The length of the projection of this Vec3 onto the other
+           Vec3.
+         - The product of:
+         -- The length of this Vec3
+         -- The length of the other Vec3
+         -- The Cosine of the angle between them
+
+        https://www.falstad.com/dotproduct/
+        https://mathworld.wolfram.com/DotProduct.html
+
+        Args:
+            other (Vec3): The other Vec3 to calculate the dot product
+                with.
+        Raises:
+            TypeError: If other is not a Vec3.
+        Returns:
+            float: The dot product
+        """
+
+        if isinstance(other, Vec3):
+            return (
+                self._e0 * other._e0
+                + self._e1 * other._e1
+                + self._e2 * other._e2
+            )
+        else:
+            raise TypeError(
+                "Cannot calculate dot product with non Vec3 object "
+                "({other_type})".format(other_type=type(other))
+            )
+
+    def cross(self, other):
+        """
+        Calculate cross product between this and another Vec3.
+
+        The result of the cross product is equal to:
+         - A Vec3 perpendicular to the plane formed by the two Vec3s,
+           pointing in the direction governed by the right hand rule. If
+           C = A x B then:
+         -- If A is your thumb, and B is your index finger, then C will
+            point in the direction of your middle finger.
+         -- If A is your index finger, and B is your middle finger,
+            then C will point in the direction of your thumb.
+         - A Vec3 with a magnitude equal to the area of the
+           parallelogram formed by the two vectors.
+
+        https://en.wikipedia.org/wiki/Cross_product
+
+        Args:
+            other (Vec3): The other Vec3 to calculate the cross product
+                with.
+        Raises:
+            TypeError: If other is not a Vec3.
+        Returns:
+            Vec3: The cross product Vec3.
+        """
+
+        if isinstance(other, Vec3):
+            return Vec3(
+                (self._e1 * other._e2) - (self._e2 * other._e1),
+                (self._e2 * other._e0) - (self._e0 * other._e2),
+                (self._e0 * other._e1) - (self._e1 * other._e0),
+            )
+        else:
+            raise TypeError(
+                "Cannot calculate cross product with non Vec3 object "
+                "({other_type})".format(other_type=type(other))
+            )
+
+    def normalise(self):
+        """
+        Normalise the Vec3 in place so it is unit length.
+
+        This is done by dividing all the elements by the length of the
+        Vec3.
+        """
+
+        length = self.length()
+        self._e0 /= length
+        self._e1 /= length
+        self._e2 /= length
+
+    def normalised(self):
+        """
+        Get a normalised version of this Vec3.
+
+        This is done by dividing all the elements by the length of the
+        Vec3.
+
+        Returns:
+            Vec3: This Vec3, but normalised.
+        """
+        length = self.length()
+        return Vec3(
+            self._e0 / length,
+            self._e1 / length,
+            self._e2 / length,
+        )
