@@ -6,6 +6,8 @@ Used for colours, positions and normals
 import numbers
 import math
 
+_TOLERANCE = 0.00001
+
 
 class Vec3():
     """
@@ -19,8 +21,8 @@ class Vec3():
 
         Args:
             e0 (float): The first value.
-            e1 (float): The first value.
-            e2 (float): The first value.
+            e1 (float): The second value.
+            e2 (float): The third value.
         """
 
         self._validate_value(e0)
@@ -92,11 +94,56 @@ class Vec3():
 
         E.g.::
             vec1 += vec2
+
+        Implementing __iadd__ as well as __add__ because I think it
+        makes it more efficient, a new object isn't assigned in memory,
+        whereas if only __add__ is implemented, a new object gets
+        created.
         """
         if isinstance(other, Vec3):
             self._e0 += other._e0
             self._e1 += other._e1
             self._e2 += other._e2
+            return self
+        else:
+            raise TypeError("Cannot add {other_type} to Vec3".format(
+                other_type=type(other)
+            ))
+
+    def __sub__(self, other):
+        """
+        Subtract one Vec3 from another.
+
+        E.g.::
+            vec3 = vec1 - vec2
+        """
+        if isinstance(other, Vec3):
+            return Vec3(
+                self._e0 - other._e0,
+                self._e1 - other._e1,
+                self._e2 - other._e2
+            )
+        else:
+            raise TypeError("Cannot add {other_type} to Vec3".format(
+                other_type=type(other)
+            ))
+
+    def __isub__(self, other):
+        """
+        Subtract another Vec3 from the current one in place.
+
+        E.g.::
+            vec1 -= vec2
+
+        Implementing __isub__ as well as __sub__ because I think it
+        makes it more efficient, a new object isn't assigned in memory,
+        whereas if only __sub__ is implemented, a new object gets
+        created.
+        """
+        if isinstance(other, Vec3):
+            self._e0 -= other._e0
+            self._e1 -= other._e1
+            self._e2 -= other._e2
             return self
         else:
             raise TypeError("Cannot add {other_type} to Vec3".format(
@@ -111,11 +158,10 @@ class Vec3():
             vec1 == vec2
         """
         if isinstance(other, Vec3):
-            tolerance = 0.0001
             return (
-                abs(self._e0 - other._e0) < tolerance
-                and abs(self._e1 - other._e1) < tolerance
-                and abs(self._e2 - other._e2) < tolerance
+                abs(self._e0 - other._e0) < _TOLERANCE
+                and abs(self._e1 - other._e1) < _TOLERANCE
+                and abs(self._e2 - other._e2) < _TOLERANCE
             )
         else:
             raise TypeError("Cannot compare {other_type} to Vec3".format(
@@ -147,10 +193,10 @@ class Vec3():
         Check if a value is valid for a Vec3.
 
         Raises:
-            ValueError: If the value isn't a number.
+            TypeError: If the value isn't a number.
         """
         if not isinstance(value, numbers.Number):
-            raise ValueError("Value passed is not a number.")
+            raise TypeError("Value passed is not a number.")
 
     @property
     def x(self):
@@ -161,7 +207,7 @@ class Vec3():
 
     @x.setter
     def x(self, value):
-        self._validate_value()
+        self._validate_value(value)
         self._e0 = value
 
     @property
@@ -171,9 +217,9 @@ class Vec3():
         """
         return self._e1
 
-    @x.setter
+    @y.setter
     def y(self, value):
-        self._validate_value()
+        self._validate_value(value)
         self._e1 = value
 
     @property
@@ -183,9 +229,45 @@ class Vec3():
         """
         return self._e2
 
-    @x.setter
+    @z.setter
     def z(self, value):
-        self._validate_value()
+        self._validate_value(value)
+        self._e2 = value
+
+    @property
+    def r(self):
+        """
+        Access the first element as r.
+        """
+        return self._e0
+
+    @r.setter
+    def r(self, value):
+        self._validate_value(value)
+        self._e0 = value
+
+    @property
+    def g(self):
+        """
+        Access the second element as g.
+        """
+        return self._e1
+
+    @g.setter
+    def g(self, value):
+        self._validate_value(value)
+        self._e1 = value
+
+    @property
+    def b(self):
+        """
+        Access the third element as b.
+        """
+        return self._e2
+
+    @b.setter
+    def b(self, value):
+        self._validate_value(value)
         self._e2 = value
 
     def length(self):
