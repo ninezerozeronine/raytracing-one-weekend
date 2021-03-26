@@ -1,9 +1,0 @@
-README.md
-setup.py
-src/raytracing_one_weekend/__init__.py
-src/raytracing_one_weekend/main.py
-src/raytracing_one_weekend/vec3.py
-src/raytracing_one_weekend.egg-info/PKG-INFO
-src/raytracing_one_weekend.egg-info/SOURCES.txt
-src/raytracing_one_weekend.egg-info/dependency_links.txt
-src/raytracing_one_weekend.egg-info/top_level.txt

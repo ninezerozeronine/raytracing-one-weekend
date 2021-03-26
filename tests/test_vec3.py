@@ -1,4 +1,5 @@
 import pytest
+from math import sqrt
 
 from raytracing_one_weekend.vec3 import Vec3
 
@@ -324,14 +325,6 @@ def test_imul_identity():
     assert orig == id(a)
 
 
-
-
-
-
-
-
-
-
 @pytest.mark.parametrize("a, b, expected", [
     (
         Vec3(5, 7, 9),
@@ -349,7 +342,7 @@ def test_imul_identity():
         Vec3(0.7, 1.25, 1.8),
     ),
 ])
-def test_div(a, b, expected):
+def test_truediv(a, b, expected):
     c = a / b
     assert vecs_are_equal(c, expected)
 
@@ -364,7 +357,7 @@ def test_div(a, b, expected):
         "hello",
     ),
 ])
-def test_div_raises(a, b):
+def test_truediv_raises(a, b):
     with pytest.raises(TypeError):
         res = a / b
 
@@ -386,7 +379,7 @@ def test_div_raises(a, b):
         Vec3(0.7, 1.25, 1.8),
     ),
 ])
-def test_idiv(a, b, expected):
+def test_itruediv(a, b, expected):
     a /= b
     assert vecs_are_equal(a, expected)
 
@@ -401,30 +394,17 @@ def test_idiv(a, b, expected):
         "hello",
     ),
 ])
-def test_idiv_raises(a, b):
+def test_itruediv_raises(a, b):
     with pytest.raises(TypeError):
         a /= b
 
 
-def test_idiv_identity():
+def test_itruediv_identity():
     a = Vec3(1, 2, 3)
     b = 6
     orig = id(a)
     a /= b
     assert orig == id(a)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @pytest.mark.parametrize("a, b, expected", [
@@ -471,3 +451,76 @@ def test_length(x, y, z, length):
 def test_length_squared(x, y, z, length_squared):
     vec = Vec3(x, y, z)
     assert abs(vec.length_squared() - length_squared) < TOLERANCE
+
+
+@pytest.mark.parametrize("a, b, result", [
+    (
+        Vec3(4, 8, 10),
+        Vec3(9, 2, 7),
+        122
+    ),
+    (
+        Vec3(1, 2, 3),
+        Vec3(1, 5, 7),
+        32
+    ),
+])
+def test_dot(a, b, result):
+    assert a.dot(b) == result
+
+
+def test_dot_raises():
+    with pytest.raises(TypeError):
+        a = Vec3(1, 3, 4)
+        a.dot("foo")
+
+
+@pytest.mark.parametrize("a, b, result", [
+    (
+        Vec3(1, 0, 0),
+        Vec3(0, 1, 0),
+        Vec3(0, 0, 1)
+    ),
+    (
+        Vec3(1, 2, 3),
+        Vec3(1, 5, 7),
+        Vec3(-1, -4, 3)
+    ),
+])
+def test_cross(a, b, result):
+    assert vecs_are_equal(a.cross(b), result)
+
+
+def test_cross_raises():
+    with pytest.raises(TypeError):
+        a = Vec3(1, 3, 4)
+        a.cross("foo")
+
+
+@pytest.mark.parametrize("data, result", [
+    (
+        Vec3(5, 0, 0),
+        Vec3(1, 0, 0),
+    ),
+    (
+        Vec3(2, -4, 1),
+        Vec3(2/sqrt(21), -4/sqrt(21), 1/sqrt(21)),
+    ),
+])
+def test_normalise(data, result):
+    data.normalise()
+    assert vecs_are_equal(data, result)
+
+
+@pytest.mark.parametrize("data, result", [
+    (
+        Vec3(5, 0, 0),
+        Vec3(1, 0, 0),
+    ),
+    (
+        Vec3(2, -4, 1),
+        Vec3(2/sqrt(21), -4/sqrt(21), 1/sqrt(21)),
+    ),
+])
+def test_normalised(data, result):
+    assert vecs_are_equal(data.normalised(), result)
