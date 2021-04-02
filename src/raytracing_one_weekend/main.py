@@ -109,6 +109,9 @@ def get_ray_colour(ray):
     Given a ray, get the colour from the scene
     """
 
+    if ray_sphere_intersection(ray, Vec3(0, 0, -2), 0.5):
+        return Vec3(1, 0, 0)
+
     normalised_ray = ray.direction.normalised()
 
     # Y component will now be somewhere between -1 and 1. Map it into
@@ -119,7 +122,7 @@ def get_ray_colour(ray):
     return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
 
 
-def ray_sphere_intersection(centre, radius, ray):
+def ray_sphere_intersection(ray, centre, radius):
     """
     Check if a ray intersects a sphere.
 
@@ -172,8 +175,11 @@ def ray_sphere_intersection(centre, radius, ray):
     Where:
 
     A = D.D
-    B = D.(O - C)
+    B = 2D.(O - C)
     C = (O - C).(O - C) - r^2
+
+    (O - C) is the vector from the centre of the sphere to the ray
+    origin - C to O
 
     Using our old friend the quadratic equation::
 
@@ -181,11 +187,14 @@ def ray_sphere_intersection(centre, radius, ray):
 
     We know that if B^2 - 4AC is less than 0 the equation has no
     roots - or - the ray doesn't intersect the sphere!
-
-
     """
 
-
+    C_to_O = ray.origin - centre
+    A = ray.direction.dot(ray.direction)
+    B = 2 * ray.direction.dot(C_to_O)
+    C = C_to_O.dot(C_to_O) - radius**2
+    discriminant = B**2 - (4*A*C)
+    return discriminant > 0
 
 
 def main():
