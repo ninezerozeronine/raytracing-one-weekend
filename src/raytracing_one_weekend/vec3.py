@@ -187,6 +187,25 @@ class Vec3():
             self._e2 * other,
         )
 
+    def __rmul__(self, other):
+        """
+        Multiply the components of the Vec3 by a scalar value.
+
+        E.g.::
+            newvec = 0.3 * vec
+        """
+
+        if not isinstance(other, numbers.Number):
+            raise TypeError(
+                "Cannot multiply a Vec3 by a non scalar value."
+            )
+
+        return Vec3(
+            self._e0 * other,
+            self._e1 * other,
+            self._e2 * other,
+        )
+
     def __imul__(self, other):
         """
         Multiply the components of the Vec3 in place by a scalar value.

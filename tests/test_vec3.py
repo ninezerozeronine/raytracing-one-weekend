@@ -265,6 +265,28 @@ def test_mul(a, b, expected):
     assert vecs_are_equal(c, expected)
 
 
+@pytest.mark.parametrize("a, b, expected", [
+    (
+        2,
+        Vec3(5, 7, 9),
+        Vec3(10, 14, 18),
+    ),
+    (
+        0.5,
+        Vec3(0.5, 0.7, 0.9),
+        Vec3(0.25, 0.35, 0.45),
+    ),
+    (
+        2,
+        Vec3(1.4, 2.5, 3.6),
+        Vec3(2.8, 5, 7.2),
+    ),
+])
+def test_rmul(a, b, expected):
+    c = a * b
+    assert vecs_are_equal(c, expected)
+
+
 @pytest.mark.parametrize("a, b", [
     (
         Vec3(1, 2, 3),
