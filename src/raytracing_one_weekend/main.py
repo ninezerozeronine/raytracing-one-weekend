@@ -203,7 +203,11 @@ def ray_sphere_intersection(ray, centre, radius):
     """
     Check if a ray intersects a sphere.
 
-    Note that this will have bugs if the ray is inside the sphere.
+    Note that this will probably behave wierdly if the ray is inside
+    the sphere.
+
+    Note that the direction of the ray needs to be normalised - not for
+    the hit detection, but for the correct calculation of the hit point.
 
     A point is on a sphere if the length of the vector from the centre
     of the sphere to a point on the sphere is equal to the radius of
@@ -267,16 +271,29 @@ def ray_sphere_intersection(ray, centre, radius):
     We know that if B^2 - 4AC is less than 0 the equation has no
     roots - or - the ray doesn't intersect the sphere!
 
+    Note that B has a factor of 2 in it, so if we consider that B = 2H
+    we can factor out the 2 and simplify the calculation a bit:
+
+    (-B +/- sqrt(B^2 - 4AC)) / 2A
+
+    (-2H +/- sqrt((2H)^2 - 4AC)) / 2A
+
+    (-2H +/- 2 x (sqrt(H^2 - AC))) / 2A
+
+    (-H +/- sqrt(H^2 - AC)) / A
+
     As the direction is normalised, and dotting something with itself
-    is the length squared, A is one so it can be ignored/removed from
-    the equations below.
+    is the length squared, A is 1 so it can be ignored/removed from
+    the last equation above.
+
+    -H +/- sqrt(H^2 - C)
     """
 
     C_to_O = ray.origin - centre
 
-    B = 2.0 * ray.direction.dot(C_to_O)
+    H = ray.direction.dot(C_to_O)
     C = C_to_O.dot(C_to_O) - radius**2
-    discriminant = B**2 - (4*C)
+    discriminant = H**2 - C
 
     if discriminant < 0:
         # The ray didn't intersect the sphere. Return -1 for now to
@@ -288,7 +305,7 @@ def ray_sphere_intersection(ray, centre, radius):
         # We calculate the smaller value of t - i.e. the one closer to the
         # camera by using the - of the +/- option in the quadratic root
         # equation.
-        return (-B - math.sqrt(discriminant)) / 2
+        return -H - math.sqrt(discriminant)
 
 
 def main():
