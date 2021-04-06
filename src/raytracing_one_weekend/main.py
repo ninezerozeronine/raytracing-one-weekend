@@ -1,6 +1,7 @@
 """
 Main entry point for renderer functionality
 """
+import math
 
 from PIL import Image, ImageDraw
 
@@ -44,14 +45,20 @@ def generate_image_from_data(img_data):
             # Flip row to account for image data having 0, 0 at bottom
             # left, rather than top left in a PIL image.
             flipped_row = IMG_HEIGHT - 1 - row
-            draw.point(
-                (column, row),
-                fill=(
-                    int(255 * img_data[(column, flipped_row)].r),
-                    int(255 * img_data[(column, flipped_row)].g),
-                    int(255 * img_data[(column, flipped_row)].b),
+            if (column, flipped_row) in img_data:
+                draw.point(
+                    (column, row),
+                    fill=(
+                        int(255 * img_data[(column, flipped_row)].r),
+                        int(255 * img_data[(column, flipped_row)].g),
+                        int(255 * img_data[(column, flipped_row)].b),
+                    )
                 )
-            )
+            else:
+                draw.point(
+                    (column, row),
+                    fill=(255, 255, 255)
+                )
 
     image.show()
     image.save("tmp_image.png")
@@ -86,20 +93,32 @@ def render():
     )
 
     img_data = {}
+    pixel_coords = (
+        (x, y) for y in range(IMG_HEIGHT) for x in range(IMG_WIDTH)
+    )
+    # pixel_coords = (
+    #     (50, 45),
+    #     (80, 75),
+    #     (110, 45),
+    #     (140, 45),
+    #     (80, 15),
+    #     (80, 45),
+    # )
 
-    for y_index in range(IMG_HEIGHT):
-        y_progress = y_index/IMG_HEIGHT
-        for x_index in range(IMG_WIDTH):
-            x_progress = x_index/IMG_WIDTH
-            pt_on_viewport = (
-                bottomleft_focalplane_pos
-                + viewport_vertical * y_progress
-                + viewport_horizontal * x_progress
-            )
-            ray_direction = pt_on_viewport - camera_pos
-            pixel_ray = Ray(camera_pos, ray_direction)
-            colour = get_ray_colour(pixel_ray)
-            img_data[(x_index, y_index)] = colour
+    for x_coord, y_coord in pixel_coords:
+        # print(x_coord, y_coord)
+        x_progress = x_coord/IMG_WIDTH
+        y_progress = y_coord/IMG_HEIGHT
+
+        pt_on_viewport = (
+            bottomleft_focalplane_pos
+            + viewport_vertical * y_progress
+            + viewport_horizontal * x_progress
+        )
+        ray_direction = pt_on_viewport - camera_pos
+        pixel_ray = Ray(camera_pos, ray_direction)
+        colour = get_ray_colour(pixel_ray)
+        img_data[(x_coord, y_coord)] = colour
 
     return img_data
 
@@ -108,9 +127,14 @@ def get_ray_colour(ray):
     """
     Given a ray, get the colour from the scene
     """
+    centre = Vec3(0, 0, -10)
+    radius = 3
 
-    if ray_sphere_intersection(ray, Vec3(0, 0, -2), 0.5):
-        return Vec3(1, 0, 0)
+    t = ray_sphere_intersection(ray, centre, radius)
+    if t > 0:
+        normal_at_hitpnt = ray.at(t) - centre
+        normal_at_hitpnt.normalise()
+        return normal_to_rgb(normal_at_hitpnt)
 
     normalised_ray = ray.direction.normalised()
 
@@ -122,9 +146,64 @@ def get_ray_colour(ray):
     return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
 
 
+def normal_to_rgb(normal):
+    """
+    Convert a normal to an rgb colour.
+
+    Expects unit length normal.
+    """
+
+    return Vec3(
+            normal.x + 1,
+            normal.y + 1,
+            normal.z + 1,
+        ) * 0.5
+
+
+def normal_to_discrete_rgb(normal):
+    """
+    Given a normal, return a colour based on whether it's close
+    to an axis.
+
+    E.g. if the normal is approximately +X, the colour is red, +Y the
+    colour is green.
+
+    Expects unit length normal.
+    """
+
+    axis_colour_pairs = [
+        # +X : Red
+        (Vec3(1, 0, 0), Vec3(1, 0, 0)),
+
+        # +Y : Green
+        (Vec3(0, 1, 0), Vec3(0, 1, 0)),
+
+        # +Z : Blue
+        (Vec3(0, 0, 1), Vec3(0, 0, 1)),
+
+        # -X : Pink
+        (Vec3(-1, 0, 0), Vec3(1, 0, 1)),
+
+        # -Y : Yellow
+        (Vec3(0, -1, 0), Vec3(1, 1, 0)),
+
+        # -Z : Cyan
+        (Vec3(0, 0, -1), Vec3(0, 1, 1)),
+    ]
+
+    for axis, colour in axis_colour_pairs:
+        cos_angle = axis.dot(normal)
+        if cos_angle > 0.8:
+            return colour
+    else:
+        return Vec3(0, 0, 0)
+
+
 def ray_sphere_intersection(ray, centre, radius):
     """
     Check if a ray intersects a sphere.
+
+    Note that this will have bugs if the ray is inside the sphere.
 
     A point is on a sphere if the length of the vector from the centre
     of the sphere to a point on the sphere is equal to the radius of
@@ -187,14 +266,29 @@ def ray_sphere_intersection(ray, centre, radius):
 
     We know that if B^2 - 4AC is less than 0 the equation has no
     roots - or - the ray doesn't intersect the sphere!
+
+    As the direction is normalised, and dotting something with itself
+    is the length squared, A is one so it can be ignored/removed from
+    the equations below.
     """
 
     C_to_O = ray.origin - centre
-    A = ray.direction.dot(ray.direction)
-    B = 2 * ray.direction.dot(C_to_O)
+
+    B = 2.0 * ray.direction.dot(C_to_O)
     C = C_to_O.dot(C_to_O) - radius**2
-    discriminant = B**2 - (4*A*C)
-    return discriminant > 0
+    discriminant = B**2 - (4*C)
+
+    if discriminant < 0:
+        # The ray didn't intersect the sphere. Return -1 for now to
+        # signify a non-hit
+        return -1
+    else:
+        # The ray did intersect the sphere, calculate the t value where
+        # the hit occured and return it.
+        # We calculate the smaller value of t - i.e. the one closer to the
+        # camera by using the - of the +/- option in the quadratic root
+        # equation.
+        return (-B - math.sqrt(discriminant)) / 2
 
 
 def main():

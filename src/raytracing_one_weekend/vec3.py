@@ -271,6 +271,16 @@ class Vec3():
         self._e2 /= other
         return self
 
+    def __repr__(self):
+        """
+
+        """
+        return "'Vec3({e0}, {e1}, {e2})'".format(
+            e0=self._e0,
+            e1=self._e1,
+            e2=self._e2,
+        )
+
     def _validate_key(self, key):
         """
         Check if key is valid.

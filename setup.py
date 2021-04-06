@@ -7,6 +7,9 @@ setup(
     author_email="contactninezerozeronine@gmail.com",
     description="A raytracer achievable in a weekend.",
     url="https://github.com/ninezerozeronine/raytracing-one-weekend",
+    install_requires=[
+        "Pillow",
+    ],
     packages=find_packages('src'),
     package_dir={'': 'src'},
 )

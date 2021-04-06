@@ -16,7 +16,9 @@ class Ray():
         """
 
         self.origin = origin
-        self.direction = direction
+        # Normalise the direction on creation - this was causing all
+        # sorts of wierdness in the ray-sphere intersection code.
+        self.direction = direction.normalised()
 
     def at(self, t):
         """
@@ -28,7 +30,7 @@ class Ray():
 
                 If t is 0, the resultant position will be the origin
                 of the ray. If t is 2, the resultant position will be
-                the origin, plus moving two units in the direction
+                the origin, plus moving twice in the direction that
                 direction is pointing.
         """
 
