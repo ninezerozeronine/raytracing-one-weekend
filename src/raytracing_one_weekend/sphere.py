@@ -105,18 +105,23 @@ class Sphere(hittable.Hittable):
         C = C_to_O.dot(C_to_O) - self.radius**2
         discriminant = H**2 - C
 
-        if discriminant < 0:
+        # This rules out very tiny discriminants - or glancing
+        # hits on the sphere. If left in, they can cause precision
+        # issues and normals can flip when they're not meant to.
+        #
+        # Seeing as it's a glancing hit anyway, just call it a miss.
+        if discriminant < 0.00001:
             # The ray didn't intersect the sphere - no hit and no hit
             # record.
             return False, None
         else:
             # The ray did intersect the sphere, calculate the t value
             # where the hit occured.
-
+            #
             # We calculate the smaller of the two first (i.e. the one
             # closer to the camera) by using the - of the +/- option in
             # the quadratic root
-
+            #
             # We also need it to be within the range of t_min and t_max.
             t = -H - math.sqrt(discriminant)
             if t < t_min or t > t_max:
@@ -133,15 +138,16 @@ class Sphere(hittable.Hittable):
             # the normal is facing "toward" the ray. This means the
             # Cosine of the angle between them will be < 0 (i.e.
             # between 90 and 180).
-
+            #
             # However if the ray is inside the sphere the normal will
             # be facing "away" from the ray and the Cosine of the angle
             # between them will be > 0 (i.e between 0 and 90)
-
+            #
             # If we're inside the sphere we flip the normal so that
             # the normal always faces the camera, and make a note
             # that this is a back facing surface.
             if ray.direction.dot(normal) > 0:
+                print(ray.direction.dot(normal))
                 print("Inside!")
                 normal *= -1
                 side = hittable.Side.BACK
