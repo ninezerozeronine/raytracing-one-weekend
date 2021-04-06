@@ -7,6 +7,8 @@ from PIL import Image, ImageDraw
 
 from .vec3 import Vec3
 from .ray import Ray
+from .hittable import World
+from .sphere import Sphere
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
@@ -68,6 +70,8 @@ def render():
     """
     Do the rendering of the image.
     """
+
+    # Camera setup
     viewport_width = 2.0
     viewport_height = viewport_width * (IMG_HEIGHT/IMG_WIDTH)
     viewport_vertical = Vec3(0, viewport_height, 0)
@@ -92,6 +96,13 @@ def render():
         + viewport_horizontal * -0.5
     )
 
+    # World setup
+    world = World()
+    world.hittables.append(Sphere(Vec3(-3, 0, -7), 3))
+    world.hittables.append(Sphere(Vec3(0, 0, -10), 3))
+    world.hittables.append(Sphere(Vec3(3, 0, -13), 3))
+    world.hittables.append(Sphere(Vec3(6, 0, -17), 3))
+
     img_data = {}
     pixel_coords = (
         (x, y) for y in range(IMG_HEIGHT) for x in range(IMG_WIDTH)
@@ -106,7 +117,6 @@ def render():
     # )
 
     for x_coord, y_coord in pixel_coords:
-        # print(x_coord, y_coord)
         x_progress = x_coord/IMG_WIDTH
         y_progress = y_coord/IMG_HEIGHT
 
@@ -117,33 +127,37 @@ def render():
         )
         ray_direction = pt_on_viewport - camera_pos
         pixel_ray = Ray(camera_pos, ray_direction)
-        colour = get_ray_colour(pixel_ray)
+        colour = get_ray_colour(pixel_ray, world)
         img_data[(x_coord, y_coord)] = colour
 
     return img_data
 
 
-def get_ray_colour(ray):
+def get_ray_colour(ray, world):
     """
     Given a ray, get the colour from the scene
     """
-    centre = Vec3(0, 0, -10)
-    radius = 3
+    # centre = Vec3(0, 0, -10)
+    # radius = 3
 
-    t = ray_sphere_intersection(ray, centre, radius)
-    if t > 0:
-        normal_at_hitpnt = ray.at(t) - centre
-        normal_at_hitpnt.normalise()
-        return normal_to_rgb(normal_at_hitpnt)
+    # t = ray_sphere_intersection(ray, centre, radius)
+    # if t > 0:
+    #     normal_at_hitpnt = ray.at(t) - centre
+    #     normal_at_hitpnt.normalise()
+    #     return normal_to_rgb(normal_at_hitpnt)
 
-    normalised_ray = ray.direction.normalised()
+    hit, hit_record = world.hit(ray, 0, 5000)
+    if hit:
+        return normal_to_discrete_rgb(hit_record.normal)
+    else:
+        normalised_ray = ray.direction.normalised()
 
-    # Y component will now be somewhere between -1 and 1. Map it into
-    # a 0 to 1 range.
-    t = 0.5 * (normalised_ray.y + 1)
+        # Y component will now be somewhere between -1 and 1. Map it into
+        # a 0 to 1 range.
+        t = 0.5 * (normalised_ray.y + 1)
 
-    # Lerp between white and blue based on mapped Y
-    return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
+        # Lerp between white and blue based on mapped Y
+        return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
 
 
 def normal_to_rgb(normal):
