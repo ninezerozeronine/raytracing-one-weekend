@@ -9,6 +9,7 @@ from .vec3 import Vec3
 from .ray import Ray
 from .renderable import World
 from .sphere import Sphere
+from .camera import Camera
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
@@ -71,30 +72,7 @@ def render():
     Do the rendering of the image.
     """
 
-    # Camera setup
-    viewport_width = 2.0
-    viewport_height = viewport_width * (IMG_HEIGHT/IMG_WIDTH)
-    viewport_vertical = Vec3(0, viewport_height, 0)
-    viewport_horizontal = Vec3(viewport_width, 0, 0)
-    focalplane_dist = 1.0
-
-    camera_pos = Vec3(0, 0, 0)
-    bottomleft_focalplane_pos = (
-        # Start at camera position
-        camera_pos
-
-        # The camera is looking in -Z, this way X is to the right and Y
-        # is up like a typical X/Y graph.
-        # Move out to the focal plane in -Z, this puts us in the centre
-        # of the focal plane
-        + Vec3(0, 0, (focalplane_dist * -1))
-
-        # Move to the bottom of the focalplane
-        + viewport_vertical * -0.5
-
-        # Move to the left of the focalplane
-        + viewport_horizontal * -0.5
-    )
+    camera = Camera(IMG_WIDTH/IMG_HEIGHT)
 
     # World setup
     world = World()
@@ -119,15 +97,8 @@ def render():
     for x_coord, y_coord in pixel_coords:
         x_progress = x_coord/IMG_WIDTH
         y_progress = y_coord/IMG_HEIGHT
-
-        pt_on_viewport = (
-            bottomleft_focalplane_pos
-            + viewport_vertical * y_progress
-            + viewport_horizontal * x_progress
-        )
-        ray_direction = pt_on_viewport - camera_pos
-        pixel_ray = Ray(camera_pos, ray_direction)
-        colour = get_ray_colour(pixel_ray, world)
+        ray = camera.get_ray(x_progress, y_progress)
+        colour = get_ray_colour(ray, world)
         img_data[(x_coord, y_coord)] = colour
 
     return img_data
