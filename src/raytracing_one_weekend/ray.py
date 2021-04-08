@@ -1,4 +1,4 @@
-from .vec3 import Vec3
+import numpy
 
 
 class Ray():
@@ -11,14 +11,16 @@ class Ray():
         Initialise the object.
 
         Args:
-            origin (Vec3): The origin or starting point of the ray.
-            direction (Vec3): The direction that the ray is pointed in.
+            origin (numpy.array): The origin or starting point of the
+                ray.
+            direction (numpy.array): The direction that the ray is
+                pointed in.
         """
 
         self.origin = origin
         # Normalise the direction on creation - this was causing all
         # sorts of wierdness in the ray-sphere intersection code.
-        self.direction = direction.normalised()
+        self.direction = direction / numpy.sqrt(direction.dot(direction))
 
     def at(self, t):
         """
