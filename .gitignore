@@ -7,3 +7,4 @@ src/*.egg-info
 .coverage
 htmlcov
 *__pycache__
+dev_helpers/tmp_image.png

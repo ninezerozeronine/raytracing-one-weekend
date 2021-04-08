@@ -11,7 +11,7 @@ class Side(Enum):
     BACK = auto()
 
 
-class Hittable(abc.ABC):
+class Renderable(abc.ABC):
     """
     Base clas for all things that the renderer can "see".
     """
@@ -67,7 +67,7 @@ class World():
         Initialise the object
         """
 
-        self.hittables = []
+        self.renderables = []
 
     def hit(self, ray, t_min, t_max):
         """
@@ -78,8 +78,8 @@ class World():
         closest_hit_t = t_max
         closest_hit_record = None
 
-        for hittable in self.hittables:
-            hit, hit_record = hittable.hit_test(ray, t_min, closest_hit_t)
+        for renderable in self.renderables:
+            hit, hit_record = renderable.hit_test(ray, t_min, closest_hit_t)
             if hit:
                 hit_anything = True
                 closest_hit_t = hit_record.t

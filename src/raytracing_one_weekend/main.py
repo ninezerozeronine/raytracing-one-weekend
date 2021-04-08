@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 from .vec3 import Vec3
 from .ray import Ray
-from .hittable import World
+from .renderable import World
 from .sphere import Sphere
 
 IMG_HEIGHT = 90
@@ -98,10 +98,10 @@ def render():
 
     # World setup
     world = World()
-    world.hittables.append(Sphere(Vec3(-3, 0, -7), 3))
-    world.hittables.append(Sphere(Vec3(0, 0, -10), 3))
-    world.hittables.append(Sphere(Vec3(3, 0, -13), 3))
-    world.hittables.append(Sphere(Vec3(6, 0, -17), 3))
+    world.renderables.append(Sphere(Vec3(-3, 0, -7), 3))
+    world.renderables.append(Sphere(Vec3(0, 0, -10), 3))
+    world.renderables.append(Sphere(Vec3(3, 0, -13), 3))
+    world.renderables.append(Sphere(Vec3(6, 0, -17), 3))
 
     img_data = {}
     pixel_coords = (

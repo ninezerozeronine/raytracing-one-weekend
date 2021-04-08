@@ -1,9 +1,9 @@
 import math
 
-from . import hittable
+from . import renderable
 
 
-class Sphere(hittable.Hittable):
+class Sphere(renderable.Renderable):
     def __init__(self, centre, radius):
         """
         Initialise the object   
@@ -106,7 +106,8 @@ class Sphere(hittable.Hittable):
         discriminant = H**2 - C
 
         # This rules out very tiny discriminants - or glancing
-        # hits on the sphere. If left in, they can cause precision
+        # hits on the sphere as well as complete misses.
+        # If the glancing hits are left in, they can cause precision
         # issues and normals can flip when they're not meant to.
         #
         # Seeing as it's a glancing hit anyway, just call it a miss.
@@ -133,7 +134,7 @@ class Sphere(hittable.Hittable):
             hit_point = ray.at(t)
             # Dividing by the radius is a quick way to normalise!
             normal = (hit_point - self.centre)/self.radius
-            side = hittable.Side.FRONT
+            side = renderable.Side.FRONT
             # In the typical case the ray is outside the sphere, and
             # the normal is facing "toward" the ray. This means the
             # Cosine of the angle between them will be < 0 (i.e.
@@ -150,9 +151,9 @@ class Sphere(hittable.Hittable):
                 print(ray.direction.dot(normal))
                 print("Inside!")
                 normal *= -1
-                side = hittable.Side.BACK
+                side = renderable.Side.BACK
 
-            return True, hittable.HitRecord(
+            return True, renderable.HitRecord(
                 hit_point,
                 normal,
                 t,
