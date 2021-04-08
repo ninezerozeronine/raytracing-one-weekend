@@ -148,8 +148,6 @@ class Sphere(renderable.Renderable):
             # the normal always faces the camera, and make a note
             # that this is a back facing surface.
             if ray.direction.dot(normal) > 0:
-                print(ray.direction.dot(normal))
-                print("Inside!")
                 normal *= -1
                 side = renderable.Side.BACK
 

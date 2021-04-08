@@ -2,6 +2,7 @@
 Main entry point for renderer functionality
 """
 import math
+from random import random
 
 from PIL import Image, ImageDraw
 
@@ -13,6 +14,7 @@ from .camera import Camera
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
+PIXEL_SAMPLES = 50
 HORIZON_COLOUR = Vec3(1, 1, 1)
 SKY_COLOUR = Vec3(0.5, 0.7, 1)
 
@@ -95,11 +97,14 @@ def render():
     # )
 
     for x_coord, y_coord in pixel_coords:
-        x_progress = x_coord/IMG_WIDTH
-        y_progress = y_coord/IMG_HEIGHT
-        ray = camera.get_ray(x_progress, y_progress)
-        colour = get_ray_colour(ray, world)
-        img_data[(x_coord, y_coord)] = colour
+        # print(f"Rendering pixel at ({x_coord}, {y_coord})")
+        total_colour = Vec3(0, 0, 0)
+        for _ in range(PIXEL_SAMPLES):
+            x_progress = (x_coord + random()) / IMG_WIDTH
+            y_progress = (y_coord + random()) / IMG_HEIGHT
+            ray = camera.get_ray(x_progress, y_progress)
+            total_colour += get_ray_colour(ray, world)
+        img_data[(x_coord, y_coord)] = total_colour/PIXEL_SAMPLES
 
     return img_data
 

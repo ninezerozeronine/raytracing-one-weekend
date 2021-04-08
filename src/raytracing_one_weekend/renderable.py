@@ -13,7 +13,7 @@ class Side(Enum):
 
 class Renderable(abc.ABC):
     """
-    Base clas for all things that the renderer can "see".
+    Base class for all things that the renderer can "see".
     """
 
     @abc.abstractmethod
