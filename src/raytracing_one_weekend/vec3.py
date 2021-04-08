@@ -25,9 +25,9 @@ class Vec3():
             e2 (float): The third value.
         """
 
-        self._validate_value(e0)
-        self._validate_value(e1)
-        self._validate_value(e2)
+        # self._validate_value(e0)
+        # self._validate_value(e1)
+        # self._validate_value(e2)
 
         self._e0 = e0
         self._e1 = e1
@@ -43,7 +43,7 @@ class Vec3():
         Returns:
             int: The value for the element at the given index.
         """
-        self._validate_key(key)
+        # self._validate_key(key)
 
         if key == 0:
             return self._e0
@@ -60,8 +60,8 @@ class Vec3():
             key (int): The index of the value to set.
             value (float): The value to set.
         """
-        self._validate_key(key)
-        self._validate_value(value)
+        # self._validate_key(key)
+        # self._validate_value(value)
 
         if key == 0:
             self._e0 = value

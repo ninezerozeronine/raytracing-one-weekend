@@ -3,7 +3,7 @@ import math
 from . import renderable
 
 
-class Sphere(renderable.Renderable):
+class Sphere():
     def __init__(self, centre, radius):
         """
         Initialise the object   
