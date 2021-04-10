@@ -1,4 +1,5 @@
-from .vec3 import Vec3
+import numpy
+
 from .ray import Ray
 
 
@@ -19,9 +20,9 @@ class Camera():
         viewport_width = 2.0
         focalplane_dist = 1.0
 
-        self.viewport_horizontal = Vec3(viewport_width, 0, 0)
-        self.viewport_vertical = Vec3(0, viewport_width/aspect_ratio, 0)
-        self.camera_pos = Vec3(0, 0, 0)
+        self.viewport_horizontal = numpy.array([viewport_width, 0.0, 0.0])
+        self.viewport_vertical = numpy.array([0.0, viewport_width/aspect_ratio, 0.0])
+        self.camera_pos = numpy.array([0.0, 0.0, 0.0])
         self.bottomleft_focalplane_pos = (
             # Start at camera position
             self.camera_pos
@@ -30,7 +31,7 @@ class Camera():
             # is up like a typical X/Y graph.
             # Move out to the focal plane in -Z, this puts us in the centre
             # of the focal plane
-            + Vec3(0, 0, (focalplane_dist * -1))
+            + numpy.array([0.0, 0.0, (focalplane_dist * -1.0)])
 
             # Move to the bottom of the focalplane
             + self.viewport_vertical * -0.5

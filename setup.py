@@ -9,6 +9,7 @@ setup(
     url="https://github.com/ninezerozeronine/raytracing-one-weekend",
     install_requires=[
         "Pillow",
+        "numpy",
     ],
     packages=find_packages('src'),
     package_dir={'': 'src'},

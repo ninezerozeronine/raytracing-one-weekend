@@ -5,8 +5,8 @@ import math
 from random import random
 
 from PIL import Image, ImageDraw
+import numpy
 
-from .vec3 import Vec3
 from .ray import Ray
 from .renderable import World
 from .sphere import Sphere
@@ -14,9 +14,9 @@ from .camera import Camera
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
-PIXEL_SAMPLES = 50
-HORIZON_COLOUR = Vec3(1, 1, 1)
-SKY_COLOUR = Vec3(0.5, 0.7, 1)
+PIXEL_SAMPLES = 10
+HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
+SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 
 
 def generate_test_image():
@@ -54,9 +54,9 @@ def generate_image_from_data(img_data):
                 draw.point(
                     (column, row),
                     fill=(
-                        int(255 * img_data[(column, flipped_row)].r),
-                        int(255 * img_data[(column, flipped_row)].g),
-                        int(255 * img_data[(column, flipped_row)].b),
+                        int(255 * img_data[(column, flipped_row)][0]),
+                        int(255 * img_data[(column, flipped_row)][1]),
+                        int(255 * img_data[(column, flipped_row)][2]),
                     )
                 )
             else:
@@ -78,10 +78,10 @@ def render():
 
     # World setup
     world = World()
-    world.renderables.append(Sphere(Vec3(-3, 0, -7), 3))
-    world.renderables.append(Sphere(Vec3(0, 0, -10), 3))
-    world.renderables.append(Sphere(Vec3(3, 0, -13), 3))
-    world.renderables.append(Sphere(Vec3(6, 0, -17), 3))
+    world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0))
+    world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0))
+    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0))
 
     img_data = {}
     pixel_coords = (
@@ -98,7 +98,7 @@ def render():
 
     for x_coord, y_coord in pixel_coords:
         # print(f"Rendering pixel at ({x_coord}, {y_coord})")
-        total_colour = Vec3(0, 0, 0)
+        total_colour = numpy.array([0.0, 0.0, 0.0])
         for _ in range(PIXEL_SAMPLES):
             x_progress = (x_coord + random()) / IMG_WIDTH
             y_progress = (y_coord + random()) / IMG_HEIGHT
@@ -114,15 +114,13 @@ def get_ray_colour(ray, world):
     Given a ray, get the colour from the scene
     """
 
-    hit, hit_record = world.hit(ray, 0, 5000)
+    hit, hit_record = world.hit(ray, 0.0, 5000.0)
     if hit:
         return normal_to_rgb(hit_record.normal)
     else:
-        normalised_ray = ray.direction.normalised()
-
-        # Y component will now be somewhere between -1 and 1. Map it into
+        # Y component is somewhere between -1 and 1. Map it into
         # a 0 to 1 range.
-        t = 0.5 * (normalised_ray.y + 1)
+        t = 0.5 * (ray.direction[1] + 1.0)
 
         # Lerp between white and blue based on mapped Y
         return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
@@ -135,11 +133,11 @@ def normal_to_rgb(normal):
     Expects unit length normal.
     """
 
-    return Vec3(
-            normal.x + 1,
-            normal.y + 1,
-            normal.z + 1,
-        ) * 0.5
+    return numpy.array([
+            normal[0] + 1.0,
+            normal[1] + 1.0,
+            normal[2] + 1.0,
+        ]) * 0.5
 
 
 def normal_to_discrete_rgb(normal):
@@ -155,22 +153,22 @@ def normal_to_discrete_rgb(normal):
 
     axis_colour_pairs = [
         # +X : Red
-        (Vec3(1, 0, 0), Vec3(1, 0, 0)),
+        (numpy.array([1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 0.0])),
 
         # +Y : Green
-        (Vec3(0, 1, 0), Vec3(0, 1, 0)),
+        (numpy.array([0.0, 1.0, 0.0]), numpy.array([0.0, 1.0, 0.0])),
 
         # +Z : Blue
-        (Vec3(0, 0, 1), Vec3(0, 0, 1)),
+        (numpy.array([0.0, 0.0, 1.0]), numpy.array([0.0, 0.0, 1.0])),
 
         # -X : Pink
-        (Vec3(-1, 0, 0), Vec3(1, 0, 1)),
+        (numpy.array([-1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 1.0])),
 
         # -Y : Yellow
-        (Vec3(0, -1, 0), Vec3(1, 1, 0)),
+        (numpy.array([0.0, -1.0, 0.0]), numpy.array([1.0, 1.0, 0.0])),
 
         # -Z : Cyan
-        (Vec3(0, 0, -1), Vec3(0, 1, 1)),
+        (numpy.array([0.0, 0.0, -1.0]), numpy.array([0.0, 1.0, 1.0])),
     ]
 
     for axis, colour in axis_colour_pairs:
@@ -178,7 +176,7 @@ def normal_to_discrete_rgb(normal):
         if cos_angle > 0.8:
             return colour
     else:
-        return Vec3(0, 0, 0)
+        return numpy.array([0.0, 0.0, 0.0])
 
 
 def main():

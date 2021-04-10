@@ -1,9 +1,11 @@
 import math
 
+import numpy
+
 from . import renderable
 
 
-class Sphere(renderable.Renderable):
+class Sphere():
     def __init__(self, centre, radius):
         """
         Initialise the object   
@@ -133,7 +135,7 @@ class Sphere(renderable.Renderable):
 
             hit_point = ray.at(t)
             # Dividing by the radius is a quick way to normalise!
-            normal = (hit_point - self.centre)/self.radius
+            normal = (hit_point - self.centre) / self.radius
             side = renderable.Side.FRONT
             # In the typical case the ray is outside the sphere, and
             # the normal is facing "toward" the ray. This means the
@@ -147,8 +149,8 @@ class Sphere(renderable.Renderable):
             # If we're inside the sphere we flip the normal so that
             # the normal always faces the camera, and make a note
             # that this is a back facing surface.
-            if ray.direction.dot(normal) > 0:
-                normal *= -1
+            if ray.direction.dot(normal) > 0.0:
+                normal *= -1.0
                 side = renderable.Side.BACK
 
             return True, renderable.HitRecord(
