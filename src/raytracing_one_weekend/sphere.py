@@ -126,9 +126,10 @@ class Sphere():
             # the quadratic root
             #
             # We also need it to be within the range of t_min and t_max.
-            t = -H - math.sqrt(discriminant)
+            sqrt_discriminant = math.sqrt(discriminant)
+            t = -H - sqrt_discriminant
             if t < t_min or t > t_max:
-                t = -H + math.sqrt(discriminant)
+                t = -H + sqrt_discriminant
                 if t < t_min or t > t_max:
                     # Neither root was suitable.
                     return False, None

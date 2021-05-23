@@ -14,9 +14,11 @@ from .camera import Camera
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
-PIXEL_SAMPLES = 10
+PIXEL_SAMPLES = 50
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
+RNG = numpy.random.default_rng()
+MAX_DEPTH = 50
 
 
 def generate_test_image():
@@ -78,10 +80,11 @@ def render():
 
     # World setup
     world = World()
-    world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0))
+    # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0))
     world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0))
+    # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0))
+    # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0))
+    world.renderables.append(Sphere(numpy.array([0.0, -103.0, -10.0]), 100.0))
 
     img_data = {}
     pixel_coords = (
@@ -97,26 +100,42 @@ def render():
     # )
 
     for x_coord, y_coord in pixel_coords:
-        # print(f"Rendering pixel at ({x_coord}, {y_coord})")
+        print(f"Rendering pixel at ({x_coord}, {y_coord})")
         total_colour = numpy.array([0.0, 0.0, 0.0])
         for _ in range(PIXEL_SAMPLES):
             x_progress = (x_coord + random()) / IMG_WIDTH
             y_progress = (y_coord + random()) / IMG_HEIGHT
             ray = camera.get_ray(x_progress, y_progress)
-            total_colour += get_ray_colour(ray, world)
-        img_data[(x_coord, y_coord)] = total_colour/PIXEL_SAMPLES
+            total_colour += get_ray_colour(ray, world, MAX_DEPTH)
+            # The squareroot is for a 2.0 gamma correction
+        img_data[(x_coord, y_coord)] = numpy.sqrt(total_colour/PIXEL_SAMPLES)
 
     return img_data
 
 
-def get_ray_colour(ray, world):
+def get_ray_colour(ray, world, depth):
     """
     Given a ray, get the colour from the scene
     """
 
+    if depth <= 0:
+        return numpy.array([0.0, 0.0, 0.0])
+
     hit, hit_record = world.hit(ray, 0.0, 5000.0)
     if hit:
-        return normal_to_rgb(hit_record.normal)
+        # return normal_to_rgb(hit_record.normal)
+        dir_target = (
+            hit_record.hit_point
+            + hit_record.normal
+            + random_vec_in_unit_sphere()
+        )
+
+        bounce_ray = Ray(
+            hit_record.hit_point,
+            dir_target - hit_record.hit_point
+        )
+        return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
+
     else:
         # Y component is somewhere between -1 and 1. Map it into
         # a 0 to 1 range.
@@ -125,6 +144,20 @@ def get_ray_colour(ray, world):
         # Lerp between white and blue based on mapped Y
         return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
 
+
+def random_vec_in_unit_sphere():
+    """
+    Generate a vector in a sphere with radius 1.
+    """
+    while True:
+        random_vec = RNG.uniform(low=-1, high=1, size=3)
+        # If the length of the vector squared (thanks dot product of
+        # a vector with itself!) is greater than 1 then we're not in
+        # a unit sphere.
+        if random_vec.dot(random_vec) > 1:
+            continue
+        else:
+            return random_vec
 
 def normal_to_rgb(normal):
     """
