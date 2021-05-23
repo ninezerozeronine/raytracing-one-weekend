@@ -127,16 +127,45 @@ def get_ray_colour(ray, world, depth):
     hit, hit_record = world.hit(ray, 0.00001, 5000.0)
     if hit:
         # return normal_to_rgb(hit_record.normal)
+
+        # This is a simple diffuse bounce ray calculation.
+        #
+        # The ray starts at the hit point. The direction the ray should
+        # point in is determined by generating a target point. The
+        # target point is a random point in a unit sphere, with it's
+        # centre at the tip of the unit normal at the hit point.
+        #
+        # dir_target = (
+        #     hit_record.hit_point
+        #     + hit_record.normal
+        #     + random_vec_in_unit_sphere()
+        # )
+
+        # bounce_ray = Ray(
+        #     hit_record.hit_point,
+        #     dir_target - hit_record.hit_point
+        # )
+
+
+        # This is a more accurate diffuse bounce ray calculation - close
+        # to a lambertian model
+        #
+        # The ray starts at the hit point. The direction the ray should
+        # point in is determined by generating a target point. The
+        # target point is a random point on a unit sphere with it's 
+        # centre  at the tip of the unit normal at the hit point.
+
         dir_target = (
             hit_record.hit_point
             + hit_record.normal
-            + random_vec_in_unit_sphere()
+            + random_unit_vec() 
         )
 
         bounce_ray = Ray(
             hit_record.hit_point,
             dir_target - hit_record.hit_point
         )
+
         return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
 
     else:
@@ -161,6 +190,21 @@ def random_vec_in_unit_sphere():
             continue
         else:
             return random_vec
+
+def random_unit_vec():
+    """
+    Return unit length vector pointing in a random direction
+    """
+
+    while True:
+        vec_in_unit_sphere = random_vec_in_unit_sphere()
+        len_squared = vec_in_unit_sphere.dot(vec_in_unit_sphere)
+        if len_squared > 0.00001:
+            unit_vec = vec_in_unit_sphere / numpy.sqrt(len_squared)
+            return unit_vec
+        else:
+            continue
+
 
 def normal_to_rgb(normal):
     """
