@@ -121,7 +121,10 @@ def get_ray_colour(ray, world, depth):
     if depth <= 0:
         return numpy.array([0.0, 0.0, 0.0])
 
-    hit, hit_record = world.hit(ray, 0.0, 5000.0)
+    # Make t_min slightly larger than 0 to prune out hits where the ray
+    # hasn't travelled any distance at all.
+    # This _really_ speeds up the calculation - not sure why! :(
+    hit, hit_record = world.hit(ray, 0.00001, 5000.0)
     if hit:
         # return normal_to_rgb(hit_record.normal)
         dir_target = (
