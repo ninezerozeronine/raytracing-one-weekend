@@ -147,23 +147,37 @@ def get_ray_colour(ray, world, depth):
         # )
 
 
+
         # This is a more accurate diffuse bounce ray calculation - close
-        # to a lambertian model
+        # to a lambertian model - but still flawed.
         #
         # The ray starts at the hit point. The direction the ray should
         # point in is determined by generating a target point. The
         # target point is a random point on a unit sphere with it's 
         # centre  at the tip of the unit normal at the hit point.
 
-        dir_target = (
-            hit_record.hit_point
-            + hit_record.normal
-            + random_unit_vec() 
-        )
+        # dir_target = (
+        #     hit_record.hit_point
+        #     + hit_record.normal
+        #     + random_unit_vec() 
+        # )
 
+        # bounce_ray = Ray(
+        #     hit_record.hit_point,
+        #     dir_target - hit_record.hit_point
+        # )
+
+
+        # This is a less flawed lambertian approximation.
+        #
+        # The bounce ray starts at the hit point. It's direction is
+        # effectively pointing toward a random point on a hemisphere
+        # with it's base at the hit point, facing in the normal
+        # direction
+        # 
         bounce_ray = Ray(
             hit_record.hit_point,
-            dir_target - hit_record.hit_point
+            random_vec_in_unit_hemisphere(hit_record.normal)
         )
 
         return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
@@ -204,6 +218,23 @@ def random_unit_vec():
             return unit_vec
         else:
             continue
+
+def random_vec_in_unit_hemisphere(hemisphere_direction):
+    """
+    Generate a vector in a unit hemishpere.
+
+    Args:
+        hemisphere_direction (numpy.array): Direction for the
+            hemisphere. Doesn't need to be normalised. The flat side
+            of the hemisphere is at the base of the vector,
+            the top of the curved part is at the tip.
+    """
+
+    in_unit_sphere = random_vec_in_unit_sphere()
+    if in_unit_sphere.dot(hemisphere_direction) > 0.0:
+        return in_unit_sphere
+    else:
+        return -in_unit_sphere
 
 
 def normal_to_rgb(normal):

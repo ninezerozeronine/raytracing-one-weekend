@@ -6,6 +6,9 @@ from . import renderable
 
 
 class Sphere():
+    """
+    Note that we don't use a base class because that slows things down.
+    """
     def __init__(self, centre, radius):
         """
         Initialise the object   
