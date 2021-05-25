@@ -13,8 +13,8 @@ from .sphere import Sphere
 from .camera import Camera
 from . import materials
 
-IMG_HEIGHT = 90
 IMG_WIDTH = 160
+IMG_HEIGHT = 90
 PIXEL_SAMPLES = 50
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
@@ -84,6 +84,7 @@ def render():
     red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.7, 0.1, 0.1]))
     normal_mat = materials.NormalToRGBMaterial()
     discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]))
 
     # World setup
     world = World()
@@ -96,8 +97,11 @@ def render():
 
     # Line of shperes left to right
     world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, normal_mat))
-    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, metal_mat))
     world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
+
+    # Floating sphere above the left/right line.
+    world.renderables.append(Sphere(numpy.array([5.0, 6.0, -16.0]), 3.0, metal_mat))
 
     # Ground Sphere
     world.renderables.append(Sphere(numpy.array([0.0, -503.0, -10.0]), 500.0, ground_mat))

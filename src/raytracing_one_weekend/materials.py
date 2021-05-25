@@ -328,6 +328,76 @@ class NormalToDiscreteRGBMaterial():
         )
 
 
+class MetalMaterial():
+    """
+    Reflect rays that hit the material.
+
+    This comes from https://raytracing.github.io/books/RayTracingInOneWeekend.html#metal/mirroredlightreflection
+    """
+
+    def __init__(self, colour):
+        """
+        Initialise the object.
+
+        Args:
+            colour (numpy.array): An RGB 0-1 array representing the
+                colour of the material.
+        """
+        self.colour = colour
+
+    def scatter(self, in_ray, hit_record):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        The following pieces make up the system in which the reflected
+        ray is calcluated:
+         * A hit point P.
+         * An incoming unit length vector V - the incoming ray
+           that has hit the surface.
+         * A unit length normal N which is the normal at the hit point.
+         * An offset vector B, which is V projected onto N, then
+           reversed (so it points in the direction of the normal).
+         * The reflected vector R.
+
+        We can consider R = V + 2B by thinking of the incoming vector, V
+        starting at P, continuing into the surface, then moving "up" by
+        B twice to come back out of the surface.
+
+        As X.Y is the length of X projected onto Y (if Y is unit length)
+        we can find -B by calculating V.N, then multiplying N by that,
+        then multiply by -1 to reverse it.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+        
+        absorbed = False
+        reflected_direction = (
+            in_ray.direction
+            - (2 * in_ray.direction.dot(hit_record.normal)) * hit_record.normal
+        )
+
+        reflected_ray = Ray(
+            hit_record.hit_point,
+            reflected_direction
+        )
+
+        return (
+            absorbed,
+            self.colour,
+            reflected_ray,
+        )
+
 def random_vec_in_unit_hemisphere(hemisphere_direction):
     """
     Generate a vector in a unit hemishpere.

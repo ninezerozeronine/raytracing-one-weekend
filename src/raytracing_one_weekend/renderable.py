@@ -22,7 +22,8 @@ class HitRecord():
             hit_point (numpy.array): Where in space the ray hit the
                 object.
             normal (numpy.array): The normal of the surface at the hit
-                point (this is always facing the ray).
+                point (this is always facing the ray and always
+                normalised).
             t (float): How far along the ray the collision occured.
             side (Side): Whether we hit the front or the back of the
                 surface.
