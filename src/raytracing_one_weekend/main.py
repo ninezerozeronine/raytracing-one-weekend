@@ -11,6 +11,7 @@ from .ray import Ray
 from .renderable import World
 from .sphere import Sphere
 from .camera import Camera
+from . import materials
 
 IMG_HEIGHT = 90
 IMG_WIDTH = 160
@@ -78,13 +79,17 @@ def render():
 
     camera = Camera(IMG_WIDTH/IMG_HEIGHT)
 
+    grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.8, 0.0]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.7, 0.1, 0.1]))
+
     # World setup
     world = World()
     # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, red_mat))
     # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0))
     # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([0.0, -103.0, -10.0]), 100.0))
+    world.renderables.append(Sphere(numpy.array([0.0, -103.0, -10.0]), 100.0, ground_mat))
 
     img_data = {}
     pixel_coords = (
@@ -123,9 +128,23 @@ def get_ray_colour(ray, world, depth):
 
     # Make t_min slightly larger than 0 to prune out hits where the ray
     # hasn't travelled any distance at all.
-    # This _really_ speeds up the calculation - not sure why! :(
+    # This _really_ speeds up the calculation compared to when it's set
+    # to 0. Not sure why! :(
     hit, hit_record = world.hit(ray, 0.00001, 5000.0)
     if hit:
+        absorbed, surface_colour, scattered_ray = hit_record.material.scatter(
+            ray,
+            hit_record
+        )
+        if not absorbed:
+            return surface_colour * get_ray_colour(scattered_ray, world, depth - 1)
+        else:
+            return surface_colour
+
+
+
+
+
         # return normal_to_rgb(hit_record.normal)
 
         # This is a simple diffuse bounce ray calculation.
@@ -175,12 +194,12 @@ def get_ray_colour(ray, world, depth):
         # with it's base at the hit point, facing in the normal
         # direction
         # 
-        bounce_ray = Ray(
-            hit_record.hit_point,
-            random_vec_in_unit_hemisphere(hit_record.normal)
-        )
+        # bounce_ray = Ray(
+        #     hit_record.hit_point,
+        #     random_vec_in_unit_hemisphere(hit_record.normal)
+        # )
 
-        return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
+        # return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
 
     else:
         # Y component is somewhere between -1 and 1. Map it into

@@ -14,7 +14,7 @@ class HitRecord():
     A record of information about a ray hitting an object.
     """
 
-    def __init__(self, hit_point, normal, t, side):
+    def __init__(self, hit_point, normal, t, side, material):
         """
         Initialise the object.
 
@@ -26,11 +26,14 @@ class HitRecord():
             t (float): How far along the ray the collision occured.
             side (Side): Whether we hit the front or the back of the
                 surface.
+            material(object): The material of the object at the hit
+                point.
         """
         self.hit_point = hit_point
         self.normal = normal
         self.t = t
         self.side = side
+        self.material = material
 
 
 class World():

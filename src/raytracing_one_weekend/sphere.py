@@ -9,13 +9,14 @@ class Sphere():
     """
     Note that we don't use a base class because that slows things down.
     """
-    def __init__(self, centre, radius):
+    def __init__(self, centre, radius, material):
         """
         Initialise the object   
         """
 
         self.centre = centre
         self.radius = radius
+        self.material = material
 
     def hit_test(self, ray, t_min, t_max):
         """
@@ -161,5 +162,6 @@ class Sphere():
                 hit_point,
                 normal,
                 t,
-                side
+                side,
+                self.material
             )
