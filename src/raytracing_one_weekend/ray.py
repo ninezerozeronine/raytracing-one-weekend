@@ -18,8 +18,9 @@ class Ray():
         """
 
         self.origin = origin
-        # Normalise the direction on creation - this was causing all
-        # sorts of wierdness in the ray-sphere intersection code.
+        # Normalise the direction on creation - not doing this was
+        # causing all sorts of wierdness in the ray-sphere intersection
+        # code.
         self.direction = direction / numpy.sqrt(direction.dot(direction))
 
     def at(self, t):

@@ -8,6 +8,27 @@ import numpy
 from .ray import Ray
 
 RNG = numpy.random.default_rng()
+AXIS_COLOUR_PAIRS = [
+    # +X : Red
+    (numpy.array([1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 0.0])),
+
+    # +Y : Green
+    (numpy.array([0.0, 1.0, 0.0]), numpy.array([0.0, 1.0, 0.0])),
+
+    # +Z : Blue
+    (numpy.array([0.0, 0.0, 1.0]), numpy.array([0.0, 0.0, 1.0])),
+
+    # -X : Pink
+    (numpy.array([-1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 1.0])),
+
+    # -Y : Yellow
+    (numpy.array([0.0, -1.0, 0.0]), numpy.array([1.0, 1.0, 0.0])),
+
+    # -Z : Cyan
+    (numpy.array([0.0, 0.0, -1.0]), numpy.array([0.0, 1.0, 1.0])),
+]
+
+
 
 class PointOnHemiSphereMaterial():
     """
@@ -195,6 +216,114 @@ class PointOnUnitSphereMaterial():
         return (
             absorbed,
             self.colour,
+            scattered_ray,
+        )
+
+
+class NormalToRGBMaterial():
+    """
+    Colour the surface based on the world normal at that point.
+
+    Based on :class:`~PointOnHemiSphereMaterial`.
+
+    Need to check if adding a get_colour method and inheriting from
+    the base class comes with a speed penalty.
+    """
+
+    def scatter(self, in_ray, hit_record):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+
+        absorbed = False
+        scatter_direction = random_vec_in_unit_hemisphere(hit_record.normal)
+        # Catch if our randomly generated direction vector is very close to
+        # zero
+        if scatter_direction.dot(scatter_direction) < 0.000001:
+            scatter_direction = hit_record.normal
+        scattered_ray = Ray(
+            hit_record.hit_point,
+            scatter_direction
+        )
+
+        colour = numpy.array([
+            hit_record.normal[0] + 1.0,
+            hit_record.normal[1] + 1.0,
+            hit_record.normal[2] + 1.0,
+        ]) * 0.5
+
+        return (
+            absorbed,
+            colour,
+            scattered_ray,
+        )
+
+
+class NormalToDiscreteRGBMaterial():
+    """
+    Colour the surface based on the discretised world normal at that
+    point.
+
+    Based on :class:`~PointOnHemiSphereMaterial`.
+
+    Need to check if adding a get_colour method and inheriting from
+    the base class comes with a speed penalty.
+    """
+
+    def scatter(self, in_ray, hit_record):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+
+        absorbed = False
+        scatter_direction = random_vec_in_unit_hemisphere(hit_record.normal)
+        # Catch if our randomly generated direction vector is very close to
+        # zero
+        if scatter_direction.dot(scatter_direction) < 0.000001:
+            scatter_direction = hit_record.normal
+        scattered_ray = Ray(
+            hit_record.hit_point,
+            scatter_direction
+        )
+
+        ret_colour = numpy.array([1.0, 0.0, 1.0])
+        for axis, colour in AXIS_COLOUR_PAIRS:
+            cos_angle = axis.dot(hit_record.normal)
+            if cos_angle > 0.8:
+                ret_colour = colour
+                break
+        else:
+            ret_colour = numpy.array([0.4, 0.4, 0.4])
+
+        return (
+            absorbed,
+            ret_colour,
             scattered_ray,
         )
 

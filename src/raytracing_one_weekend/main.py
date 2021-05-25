@@ -80,16 +80,27 @@ def render():
     camera = Camera(IMG_WIDTH/IMG_HEIGHT)
 
     grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
-    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.8, 0.0]))
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([(148/256), (116/256), (105/256)]))
     red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.7, 0.1, 0.1]))
+    normal_mat = materials.NormalToRGBMaterial()
+    discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
 
     # World setup
     world = World()
-    # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, red_mat))
-    # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0))
-    # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0))
-    world.renderables.append(Sphere(numpy.array([0.0, -103.0, -10.0]), 100.0, ground_mat))
+
+    # Row of spheres front to back
+    # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0, grey_mat))
+
+    # Line of shperes left to right
+    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, normal_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
+    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
+
+    # Ground Sphere
+    world.renderables.append(Sphere(numpy.array([0.0, -503.0, -10.0]), 500.0, ground_mat))
 
     img_data = {}
     pixel_coords = (
@@ -141,66 +152,6 @@ def get_ray_colour(ray, world, depth):
         else:
             return surface_colour
 
-
-
-
-
-        # return normal_to_rgb(hit_record.normal)
-
-        # This is a simple diffuse bounce ray calculation.
-        #
-        # The ray starts at the hit point. The direction the ray should
-        # point in is determined by generating a target point. The
-        # target point is a random point in a unit sphere, with it's
-        # centre at the tip of the unit normal at the hit point.
-        #
-        # dir_target = (
-        #     hit_record.hit_point
-        #     + hit_record.normal
-        #     + random_vec_in_unit_sphere()
-        # )
-
-        # bounce_ray = Ray(
-        #     hit_record.hit_point,
-        #     dir_target - hit_record.hit_point
-        # )
-
-
-
-        # This is a more accurate diffuse bounce ray calculation - close
-        # to a lambertian model - but still flawed.
-        #
-        # The ray starts at the hit point. The direction the ray should
-        # point in is determined by generating a target point. The
-        # target point is a random point on a unit sphere with it's 
-        # centre  at the tip of the unit normal at the hit point.
-
-        # dir_target = (
-        #     hit_record.hit_point
-        #     + hit_record.normal
-        #     + random_unit_vec() 
-        # )
-
-        # bounce_ray = Ray(
-        #     hit_record.hit_point,
-        #     dir_target - hit_record.hit_point
-        # )
-
-
-        # This is a less flawed lambertian approximation.
-        #
-        # The bounce ray starts at the hit point. It's direction is
-        # effectively pointing toward a random point on a hemisphere
-        # with it's base at the hit point, facing in the normal
-        # direction
-        # 
-        # bounce_ray = Ray(
-        #     hit_record.hit_point,
-        #     random_vec_in_unit_hemisphere(hit_record.normal)
-        # )
-
-        # return 0.5 * get_ray_colour(bounce_ray, world, depth - 1)
-
     else:
         # Y component is somewhere between -1 and 1. Map it into
         # a 0 to 1 range.
@@ -208,52 +159,6 @@ def get_ray_colour(ray, world, depth):
 
         # Lerp between white and blue based on mapped Y
         return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
-
-
-def random_vec_in_unit_sphere():
-    """
-    Generate a vector in a sphere with radius 1.
-    """
-    while True:
-        random_vec = RNG.uniform(low=-1, high=1, size=3)
-        # If the length of the vector squared (thanks dot product of
-        # a vector with itself!) is greater than 1 then we're not in
-        # a unit sphere.
-        if random_vec.dot(random_vec) > 1:
-            continue
-        else:
-            return random_vec
-
-def random_unit_vec():
-    """
-    Return unit length vector pointing in a random direction
-    """
-
-    while True:
-        vec_in_unit_sphere = random_vec_in_unit_sphere()
-        len_squared = vec_in_unit_sphere.dot(vec_in_unit_sphere)
-        if len_squared > 0.00001:
-            unit_vec = vec_in_unit_sphere / numpy.sqrt(len_squared)
-            return unit_vec
-        else:
-            continue
-
-def random_vec_in_unit_hemisphere(hemisphere_direction):
-    """
-    Generate a vector in a unit hemishpere.
-
-    Args:
-        hemisphere_direction (numpy.array): Direction for the
-            hemisphere. Doesn't need to be normalised. The flat side
-            of the hemisphere is at the base of the vector,
-            the top of the curved part is at the tip.
-    """
-
-    in_unit_sphere = random_vec_in_unit_sphere()
-    if in_unit_sphere.dot(hemisphere_direction) > 0.0:
-        return in_unit_sphere
-    else:
-        return -in_unit_sphere
 
 
 def normal_to_rgb(normal):
@@ -268,45 +173,6 @@ def normal_to_rgb(normal):
             normal[1] + 1.0,
             normal[2] + 1.0,
         ]) * 0.5
-
-
-def normal_to_discrete_rgb(normal):
-    """
-    Given a normal, return a colour based on whether it's close
-    to an axis.
-
-    E.g. if the normal is approximately +X, the colour is red, +Y the
-    colour is green.
-
-    Expects unit length normal.
-    """
-
-    axis_colour_pairs = [
-        # +X : Red
-        (numpy.array([1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 0.0])),
-
-        # +Y : Green
-        (numpy.array([0.0, 1.0, 0.0]), numpy.array([0.0, 1.0, 0.0])),
-
-        # +Z : Blue
-        (numpy.array([0.0, 0.0, 1.0]), numpy.array([0.0, 0.0, 1.0])),
-
-        # -X : Pink
-        (numpy.array([-1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 1.0])),
-
-        # -Y : Yellow
-        (numpy.array([0.0, -1.0, 0.0]), numpy.array([1.0, 1.0, 0.0])),
-
-        # -Z : Cyan
-        (numpy.array([0.0, 0.0, -1.0]), numpy.array([0.0, 1.0, 1.0])),
-    ]
-
-    for axis, colour in axis_colour_pairs:
-        cos_angle = axis.dot(normal)
-        if cos_angle > 0.8:
-            return colour
-    else:
-        return numpy.array([0.0, 0.0, 0.0])
 
 
 def main():
