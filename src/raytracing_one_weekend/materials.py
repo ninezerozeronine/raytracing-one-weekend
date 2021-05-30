@@ -335,15 +335,19 @@ class MetalMaterial():
     This comes from https://raytracing.github.io/books/RayTracingInOneWeekend.html#metal/mirroredlightreflection
     """
 
-    def __init__(self, colour):
+    def __init__(self, colour, fuzziness):
         """
         Initialise the object.
 
         Args:
             colour (numpy.array): An RGB 0-1 array representing the
                 colour of the material.
+            fuziness (float): The fuzziness of the reflections of the
+                material. Must be greater than or equal to 0, preferably
+                less than 1.
         """
         self.colour = colour
+        self.fuzziness = fuzziness
 
     def scatter(self, in_ray, hit_record):
         """
@@ -360,12 +364,18 @@ class MetalMaterial():
          * The reflected vector R.
 
         We can consider R = V + 2B by thinking of the incoming vector, V
-        starting at P, continuing into the surface, then moving "up" by
+        starting at P, continuing into the surface, then moving "out" by
         B twice to come back out of the surface.
 
         As X.Y is the length of X projected onto Y (if Y is unit length)
-        we can find -B by calculating V.N, then multiplying N by that,
-        then multiply by -1 to reverse it.
+        we can find B by calculating V.N, multiplying N by the result,
+        then multiply again -1 to reverse it.
+
+        To simulate the fuziness the end point of the reflected ray is
+        moved to a random location in a sphere centered at the tip of
+        the reflected ray. I _believe_ this gives a non uniform result,
+        instead picking points on a disk perpendicular to the ray may
+        give more uniform results.
 
         Args:
             in_ray (Ray): The ray that hit the surface.
@@ -380,23 +390,46 @@ class MetalMaterial():
                 scattered_ray (Ray): The ray that bounced off the
                     surface.
         """
-        
+
+        ret_colour = self.colour
         absorbed = False
         reflected_direction = (
             in_ray.direction
             - (2 * in_ray.direction.dot(hit_record.normal)) * hit_record.normal
         )
 
-        reflected_ray = Ray(
-            hit_record.hit_point,
-            reflected_direction
-        )
+        if self.fuzziness < 0.00001:
+            reflected_ray = Ray(
+                hit_record.hit_point,
+                reflected_direction
+            )
+        else:
+            reflected_ray = Ray(
+                hit_record.hit_point,
+                reflected_direction + self.fuzziness * random_vec_in_unit_sphere()
+            )
+
+        # With fuziness, a reflected ray can end up scattering below/into
+        # the surface - this is a catch for that.
+        # If the angle between them is > 90 degrees, the cos of the
+        # angle is less than 0, and this means we've scattered below the
+        # surface.
+        
+        if reflected_ray.direction.dot(hit_record.normal) < 0.00001:
+            absorbed = True
+
+            # Forcing the return colour to be the colour of the metal
+            # creates a bit of a halo/edge around the object with the
+            # given colour. Perhaps the scatter can just be tried again 
+            # if this happens instead?
+            ret_colour = numpy.array([0.0, 0.0, 0.0])
 
         return (
             absorbed,
-            self.colour,
+            ret_colour,
             reflected_ray,
         )
+
 
 def random_vec_in_unit_hemisphere(hemisphere_direction):
     """

@@ -84,7 +84,7 @@ def render():
     red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.7, 0.1, 0.1]))
     normal_mat = materials.NormalToRGBMaterial()
     discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
-    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]))
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.3)
 
     # World setup
     world = World()
