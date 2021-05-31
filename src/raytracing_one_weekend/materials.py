@@ -354,29 +354,12 @@ class MetalMaterial():
         """
         Scatter (or absorb) the incoming ray.
 
-        The following pieces make up the system in which the reflected
-        ray is calcluated:
-         * A hit point P.
-         * An incoming unit length vector V - the incoming ray
-           that has hit the surface.
-         * A unit length normal N which is the normal at the hit point.
-         * An offset vector B, which is V projected onto N, then
-           reversed (so it points in the direction of the normal).
-         * The reflected vector R.
-
-        We can consider R = V + 2B by thinking of the incoming vector, V
-        starting at P, continuing into the surface, then moving "out" by
-        B twice to come back out of the surface.
-
-        As X.Y is the length of X projected onto Y (if Y is unit length)
-        we can find B by calculating V.N, multiplying N by the result,
-        then multiply again -1 to reverse it.
-
         To simulate the fuziness the end point of the reflected ray is
         moved to a random location in a sphere centered at the tip of
         the reflected ray. I _believe_ this gives a non uniform result,
         instead picking points on a disk perpendicular to the ray may
         give more uniform results.
+
 
         Args:
             in_ray (Ray): The ray that hit the surface.
@@ -394,10 +377,7 @@ class MetalMaterial():
 
         ret_colour = self.colour
         absorbed = False
-        reflected_direction = (
-            in_ray.direction
-            - (2 * in_ray.direction.dot(hit_record.normal)) * hit_record.normal
-        )
+        reflected_direction = reflect(in_ray.direction, hit_record.normal)
 
         if self.fuzziness < 0.00001:
             reflected_ray = Ray(
@@ -448,30 +428,6 @@ class DielectricMaterial():
 
         self.ior = index_of_refraction
 
-    def refract(self, in_direction, normal, etai_over_etat):
-        """
-        Calculate the refracted ray.
-
-        I have almost no idea what's going on in here :(. Stolen from
-        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
-
-        Args:
-            in_direction (numpy.array): The direction of the incoming
-                ray (needs to be unit length)
-            normal (numpy.array): The normal of the surface at the hit
-                point.
-            etai_over_etat (float): A way of describing the refractive
-                indecies of the materials on either side of the boundary
-                between them.
-        """
-
-        cos_theta = min(-in_direction.dot(normal), 1.0)
-        r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
-        r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
-        r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
-        return r_out_perp + r_out_parallel
-
-
     def scatter(self, in_ray, hit_record):
         """
         Scatter (or absorb) the incoming ray.
@@ -508,6 +464,62 @@ class DielectricMaterial():
             colour,
             scattered_ray,
         )
+
+    def refract(self, in_direction, normal, etai_over_etat):
+        """
+        Calculate the refracted ray.
+
+        I have almost no idea what's going on in here :(. Stolen from
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+
+        Args:
+            in_direction (numpy.array): The direction of the incoming
+                ray (needs to be unit length)
+            normal (numpy.array): The normal of the surface at the hit
+                point.
+            etai_over_etat (float): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them.
+        """
+
+        cos_theta = min(-in_direction.dot(normal), 1.0)
+        r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
+        r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
+        r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
+        return r_out_perp + r_out_parallel
+
+
+def reflect(in_direction, surface_normal):
+    """
+    Reflect a ray off a surface facing a given direction.
+
+    Args:
+        in_direction (numpy.array): The direction of the incoming ray (
+            must be normalised)
+
+    The following pieces make up the system in which the reflected
+    ray is calcluated:
+     * A hit point P.
+     * An incoming unit length vector V - the incoming ray
+       that has hit the surface.
+     * A unit length normal N which is the normal at the hit point.
+     * An offset vector B, which is V projected onto N, then
+       reversed (so it points in the direction of the normal).
+     * The reflected vector R.
+
+    We can consider R = V + 2B by thinking of the incoming vector, V
+    starting at P, continuing into the surface, then moving "out" by
+    B twice to come back out of the surface.
+
+    As X.Y is the length of X projected onto Y (if Y is unit length)
+    we can find B by calculating V.N, multiplying N by the result,
+    then multiply again -1 to reverse it.
+    """
+    return (
+        in_direction
+        - (2 * in_direction.dot(surface_normal)) * surface_normal
+    )
+
 
 def random_vec_in_unit_hemisphere(hemisphere_direction):
     """
