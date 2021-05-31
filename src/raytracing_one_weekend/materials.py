@@ -6,6 +6,7 @@ Materials for the objects in a scene.
 import numpy
 
 from .ray import Ray
+from . import renderable
 
 RNG = numpy.random.default_rng()
 AXIS_COLOUR_PAIRS = [
@@ -430,6 +431,83 @@ class MetalMaterial():
             reflected_ray,
         )
 
+
+class DielectricMaterial():
+    """
+    A dielectic material description
+    """
+
+    def __init__(self, index_of_refraction):
+        """
+        Initialise class.
+
+        Args:
+            index_of_refraction (float): The index of refraction of the
+                material. E.g. glass = 1.5, water = 1.3
+        """
+
+        self.ior = index_of_refraction
+
+    def refract(self, in_direction, normal, etai_over_etat):
+        """
+        Calculate the refracted ray.
+
+        I have almost no idea what's going on in here :(. Stolen from
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+
+        Args:
+            in_direction (numpy.array): The direction of the incoming
+                ray (needs to be unit length)
+            normal (numpy.array): The normal of the surface at the hit
+                point.
+            etai_over_etat (float): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them.
+        """
+
+        cos_theta = min(-in_direction.dot(normal), 1.0)
+        r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
+        r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
+        r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
+        return r_out_perp + r_out_parallel
+
+
+    def scatter(self, in_ray, hit_record):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+
+        absorbed = False
+        colour = numpy.array([1.0, 1.0, 1.0])
+
+        refraction_ratio = self.ior
+        if hit_record.side == renderable.Side.FRONT:
+            refraction_ratio = 1/self.ior
+
+        refracted_dir = self.refract(
+            in_ray.direction, hit_record.normal, refraction_ratio
+        )
+
+        scattered_ray = Ray(hit_record.hit_point, refracted_dir)
+
+        return (
+            absorbed,
+            colour,
+            scattered_ray,
+        )
 
 def random_vec_in_unit_hemisphere(hemisphere_direction):
     """

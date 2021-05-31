@@ -87,7 +87,9 @@ def render():
     red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.7, 0.1, 0.1]))
     normal_mat = materials.NormalToRGBMaterial()
     discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
-    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.3)
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    fuzzy_metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.3)
+    glass_mat = materials.DielectricMaterial(1.5)
 
     # World setup
     world = World()
@@ -99,8 +101,8 @@ def render():
     # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0, grey_mat))
 
     # Line of shperes left to right
-    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, normal_mat))
-    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, metal_mat))
+    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, glass_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, glass_mat))
     world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
 
     # Floating sphere above the left/right line.
