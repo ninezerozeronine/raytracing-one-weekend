@@ -3,6 +3,8 @@ Materials for the objects in a scene.
 
 (As per the renderable we don't use a base class because that slows down execution)
 """
+import random
+
 import numpy
 
 from .ray import Ray
@@ -457,9 +459,11 @@ class DielectricMaterial():
         sin_theta = numpy.sqrt(1.0 - cos_theta**2)
         cannot_refract = refraction_ratio * sin_theta > 1.0
 
-        if cannot_refract:
+        reflectance = self.reflectance(cos_theta, refraction_ratio)
+        reflectance_too_high = reflectance > random.random()
+
+        if cannot_refract or reflectance_too_high:
             refracted_dir = reflect(in_ray.direction, hit_record.normal)
-            print("reflect")
         else:
             refracted_dir = self.refract(
                 in_ray.direction, hit_record.normal, refraction_ratio
@@ -488,6 +492,8 @@ class DielectricMaterial():
             etai_over_etat (float): A way of describing the refractive
                 indecies of the materials on either side of the boundary
                 between them.
+        Returns:
+            numpy.array: The direction of the refracted ray
         """
 
         cos_theta = min(-in_direction.dot(normal), 1.0)
@@ -495,6 +501,26 @@ class DielectricMaterial():
         r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
         r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
         return r_out_perp + r_out_parallel
+
+    def reflectance(self, cosine, ref_idx):
+        """
+        Calculate the reflectance using Schlick's approximation.
+
+        I have no idea whats going on in here. Stolen from:
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/schlickapproximation
+
+        Args:
+            cosine (float): Cosine of ... some angle :(
+            ref_idx (float): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them.
+        Returns:
+            float: A reflectance angle?
+        """
+
+        r0 = (1 - ref_idx) / (1 + ref_idx)
+        r0 = r0**2
+        return r0 + (1 - r0) * (1 - cosine)**5
 
 
 def reflect(in_direction, surface_normal):
