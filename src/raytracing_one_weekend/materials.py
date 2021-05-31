@@ -453,9 +453,17 @@ class DielectricMaterial():
         if hit_record.side == renderable.Side.FRONT:
             refraction_ratio = 1/self.ior
 
-        refracted_dir = self.refract(
-            in_ray.direction, hit_record.normal, refraction_ratio
-        )
+        cos_theta = min(-in_ray.direction.dot(hit_record.normal), 1.0)
+        sin_theta = numpy.sqrt(1.0 - cos_theta**2)
+        cannot_refract = refraction_ratio * sin_theta > 1.0
+
+        if cannot_refract:
+            refracted_dir = reflect(in_ray.direction, hit_record.normal)
+            print("reflect")
+        else:
+            refracted_dir = self.refract(
+                in_ray.direction, hit_record.normal, refraction_ratio
+            )
 
         scattered_ray = Ray(hit_record.hit_point, refracted_dir)
 
