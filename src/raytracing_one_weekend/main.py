@@ -18,7 +18,7 @@ from . import materials
 
 IMG_WIDTH = 160
 IMG_HEIGHT = 90
-PIXEL_SAMPLES = 50
+PIXEL_SAMPLES = 10
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
@@ -91,21 +91,17 @@ def render():
     fuzzy_metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.3)
     glass_mat = materials.DielectricMaterial(1.5)
 
-    # World setup
-    world = World()
+    # world = gen_glass_experiment_world()
 
-    # Row of spheres front to back
-    # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0, grey_mat))
-    # world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
-    # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0, grey_mat))
-    # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0, grey_mat))
+    # # World setup
+    world = World()
 
     # Line of shperes left to right
     world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, glass_mat))
     world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, blue_mat))
     world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
 
-    # Floating sphere above the left/right line.
+    # Floating sphere above and to the right of the left/right line.
     world.renderables.append(Sphere(numpy.array([5.0, 6.0, -16.0]), 3.0, metal_mat))
 
     # Ground Sphere
@@ -171,6 +167,57 @@ def render():
     print(f"Total time: {end_time - start_time:0.4f} seconds.")
 
     return img_data
+
+def gen_row_of_spheres_world():
+    grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+
+    # World setup
+    world = World()
+
+    # Row of spheres front to back
+    world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0, grey_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
+    world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0, grey_mat))
+    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0, grey_mat))
+
+    return world
+
+
+def gen_glass_experiment_world():
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([(148/256), (116/256), (105/256)]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    glass_mat = materials.DielectricMaterial(1.5)
+
+    # World setup
+    world = World()
+
+    # Row of spheres front to back
+    # world.renderables.append(Sphere(numpy.array([-3.0, 0.0, -7.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([3.0, 0.0, -13.0]), 3.0, grey_mat))
+    # world.renderables.append(Sphere(numpy.array([6.0, 0.0, -17.0]), 3.0, grey_mat))
+
+    # Line of shperes left to right
+    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, glass_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, blue_mat))
+    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
+
+    # Floating sphere above and to the right of the left/right line.
+    world.renderables.append(Sphere(numpy.array([5.0, 6.0, -16.0]), 3.0, metal_mat))
+
+    # Sphere embedded in the ground behind the glass sphere
+    world.renderables.append(Sphere(numpy.array([-9.0, -3.0, -16.0]), 3.0, discrete_normal_mat))
+
+    for x in range(3):
+        for y in range(3):
+            world.renderables.append(Sphere(numpy.array([(x*1.3)-12.0, (y*2.0)+1.5, -16.0]), 0.3, discrete_normal_mat))
+
+    # Ground Sphere
+    world.renderables.append(Sphere(numpy.array([0.0, -503.0, -10.0]), 500.0, ground_mat))
+
+    return world
 
 
 def get_ray_colour(ray, world, depth):
