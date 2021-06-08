@@ -1,3 +1,5 @@
+import math
+
 import numpy
 
 from .ray import Ray
@@ -8,16 +10,18 @@ class Camera():
     Represents the camera in the scene.
     """
 
-    def __init__(self, aspect_ratio):
+    def __init__(self, aspect_ratio, horizontal_fov):
         """
         Initialise the camera.
 
         Args:
             aspect_ratio (float): The aspect ratio (width/height) of the
                 image to be rendered.
+            horizontal_fov (float): The horizontal field of view in
+                degrees.
         """
 
-        viewport_width = 2.0
+        viewport_width = math.tan(math.radians(horizontal_fov/2.0)) * 2.0
         focalplane_dist = 1.0
 
         self.viewport_horizontal = numpy.array([viewport_width, 0.0, 0.0])

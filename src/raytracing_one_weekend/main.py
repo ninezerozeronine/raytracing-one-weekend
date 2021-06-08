@@ -80,32 +80,9 @@ def render():
     Do the rendering of the image.
     """
 
-    camera = Camera(IMG_WIDTH/IMG_HEIGHT)
+    camera = Camera(IMG_WIDTH/IMG_HEIGHT, 45.2399)
 
-    grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
-    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([(148/256), (116/256), (105/256)]))
-    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
-    normal_mat = materials.NormalToRGBMaterial()
-    discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
-    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
-    fuzzy_metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.3)
-    glass_mat = materials.DielectricMaterial(1.5)
-
-    # world = gen_glass_experiment_world()
-
-    # # World setup
-    world = World()
-
-    # Line of shperes left to right
-    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, glass_mat))
-    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, blue_mat))
-    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
-
-    # Floating sphere above and to the right of the left/right line.
-    world.renderables.append(Sphere(numpy.array([5.0, 6.0, -16.0]), 3.0, metal_mat))
-
-    # Ground Sphere
-    world.renderables.append(Sphere(numpy.array([0.0, -503.0, -10.0]), 500.0, ground_mat))
+    world = focal_length_world()
 
     img_data = {}
     pixel_coords = (
@@ -168,6 +145,7 @@ def render():
 
     return img_data
 
+
 def gen_row_of_spheres_world():
     grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
 
@@ -219,6 +197,40 @@ def gen_glass_experiment_world():
 
     return world
 
+
+def gen_simple_world():
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([(148/256), (116/256), (105/256)]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    discrete_normal_mat = materials.NormalToDiscreteRGBMaterial()
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    glass_mat = materials.DielectricMaterial(1.5)
+
+    world = World()
+
+    # Line of shperes left to right
+    world.renderables.append(Sphere(numpy.array([-6.0, 0.0, -10.0]), 3.0, glass_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -10.0]), 3.0, blue_mat))
+    world.renderables.append(Sphere(numpy.array([6.0, 0.0, -10.0]), 3.0, discrete_normal_mat))
+
+    # Floating sphere above and to the right of the left/right line.
+    world.renderables.append(Sphere(numpy.array([5.0, 6.0, -16.0]), 3.0, metal_mat))
+
+    # Ground Sphere
+    world.renderables.append(Sphere(numpy.array([0.0, -503.0, -10.0]), 500.0, ground_mat))
+
+    return world
+
+
+def focal_length_world():
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    normal_mat = materials.NormalToRGBMaterial()
+
+    world = World()
+
+    world.renderables.append(Sphere(numpy.array([-2.0, 0.0, -10.0]), 2.0, normal_mat))
+    world.renderables.append(Sphere(numpy.array([2.0, 0.0, -10.0]), 2.0, blue_mat))
+
+    return world
 
 def get_ray_colour(ray, world, depth):
     """
