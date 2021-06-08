@@ -16,9 +16,10 @@ from .sphere import Sphere
 from .camera import Camera
 from . import materials
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
-PIXEL_SAMPLES = 10
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
+ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
+PIXEL_SAMPLES = 50
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
@@ -80,9 +81,7 @@ def render():
     Do the rendering of the image.
     """
 
-    camera = Camera(IMG_WIDTH/IMG_HEIGHT, 45.2399)
-
-    world = focal_length_world()
+    world, camera = positionable_cam_scene()
 
     img_data = {}
     pixel_coords = (
@@ -231,6 +230,32 @@ def focal_length_world():
     world.renderables.append(Sphere(numpy.array([2.0, 0.0, -10.0]), 2.0, blue_mat))
 
     return world
+
+
+def positionable_cam_scene():
+
+    cam_pos = numpy.array([-2.0, 2.0, 1.0])
+    cam_lookat = numpy.array([0.0, 0.0, -1.0])
+    camera = Camera(cam_pos, cam_lookat, ASPECT_RATIO, 45.0)
+
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.8, 0.0]))
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.6, 0.2]), 0.0)
+    glass_mat = materials.DielectricMaterial(1.5)
+
+    world = World()
+
+    # Ground
+    world.renderables.append(Sphere(numpy.array([0.0, -100.5, -1.0]), 100.0, ground_mat))
+
+    # Glass, blue, metal
+    world.renderables.append(Sphere(numpy.array([-1.0, 0.0, -1.0]), 0.5, glass_mat))
+    world.renderables.append(Sphere(numpy.array([-1.0, 0.0, -1.0]), -0.45, glass_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 0.0, -1.0]), 0.5, blue_mat))
+    world.renderables.append(Sphere(numpy.array([1.0, 0.0, -1.0]), 0.5, metal_mat))
+
+    return world, camera
+
 
 def get_ray_colour(ray, world, depth):
     """
