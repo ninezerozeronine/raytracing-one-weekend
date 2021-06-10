@@ -4,13 +4,15 @@ import numpy
 
 from .ray import Ray
 
+RNG = numpy.random.default_rng()
+
 
 class Camera():
     """
     Represents the camera in the scene.
     """
 
-    def __init__(self, position, lookat, aspect_ratio, horizontal_fov):
+    def __init__(self, position, lookat, focus_dist, aperture, aspect_ratio, horizontal_fov):
         """
         Initialise the camera.
 
@@ -18,6 +20,16 @@ class Camera():
             position (numpy.array): The position in space of the camera.
             lookat (numpy.array): The position on space for the camera
                 to look at.
+            focus_dist (float): The distance (along the line between the
+                camera position and lookat position) to the focal plane
+                (where in space the image is sharp).
+            apeture (float): The size of the aperture of the virtual
+                lens. It's the distance the origin of the ray can be
+                peturbed (perpendicular to the ray direction) from the
+                camera position.
+                An aperture of zero gives a perfectly sharp image,
+                and if this is the case, the focal distance is somewhat
+                irrelevant, it can be set to 1.
             aspect_ratio (float): The aspect ratio (width/height) of the
                 image to be rendered.
             horizontal_fov (float): The horizontal field of view in
@@ -36,16 +48,19 @@ class Camera():
         # We know that the camera is looking in -W so calculate that
         # first.
         W_dir = position - lookat
-        W = W_dir / numpy.linalg.norm(W_dir)
+        self.W = W_dir / numpy.sqrt(W_dir.dot(W_dir))
 
         # To get U, we can cross W with the up vector.
-        U = numpy.cross(numpy.array([0.0, 1.0, 0.0]), W)
+        self.U = numpy.cross(numpy.array([0.0, 1.0, 0.0]), self.W)
 
         # Finally V is W cross U
-        V = numpy.cross(W, U)
+        self.V = numpy.cross(self.W, self.U)
 
-        self.viewport_horizontal = viewport_width * U
-        self.viewport_vertical = viewport_height * V
+        # Note that we're multiplying all these measurements by the focus 
+        # distance to scale out the viewport to the point in space where
+        # the focal plane should be.
+        self.viewport_horizontal = viewport_width * self.U * focus_dist
+        self.viewport_vertical = viewport_height * self.V * focus_dist
         self.camera_pos = position
         self.bottomleft_focalplane_pos = (
             # Start at camera position
@@ -53,7 +68,7 @@ class Camera():
 
             # Move out to the focal plane in -W, this puts us in the centre
             # of the focal plane
-            - W
+            - self.W * focus_dist
 
             # Move to the bottom of the focalplane
             - self.viewport_vertical * 0.5
@@ -61,6 +76,8 @@ class Camera():
             # Move to the left of the focalplane
             - self.viewport_horizontal * 0.5
         )
+
+        self.lens_radius = aperture / 2
 
     def get_ray(self, horizontal, vertical):
         """
@@ -75,11 +92,35 @@ class Camera():
                 the top side is 1.
         """
 
+        # Calculate how far the origin of the ray will be peturbed from
+        # The camera position.
+        offset_amount = self.lens_radius * point_in_unit_xy_disk()
+        offset_vec = self.U * offset_amount[0] + self.V * offset_amount[1]
+
         pt_on_viewport = (
             self.bottomleft_focalplane_pos
             + self.viewport_horizontal * horizontal
             + self.viewport_vertical * vertical
         )
-        ray_direction = pt_on_viewport - self.camera_pos
+        ray_direction = pt_on_viewport - (self.camera_pos + offset_vec)
 
-        return Ray(self.camera_pos, ray_direction)
+        return Ray((self.camera_pos + offset_vec), ray_direction)
+
+
+def point_in_unit_xy_disk():
+    """
+    Get a point in a disk in the XY plane with radius 1.
+
+    Returns:
+        numpy.array: Point in the disk on the XY plane
+    """
+    while True:
+        random_vec = RNG.uniform(low=-1, high=1, size=3)
+        random_vec[2] = 0.0
+        # If the length of the vector squared (thanks dot product of
+        # a vector with itself!) is greater than 1 then we're not in
+        # a unit sphere.
+        if random_vec.dot(random_vec) > 1:
+            continue
+        else:
+            return random_vec
