@@ -105,6 +105,36 @@ class Sphere():
         -H +/- sqrt(H^2 - C)
         """
 
+        # See if a quick reject works/speeds things up
+        # in_x = False
+        # if ray.direction[0] > 0.000001:
+        #     if self.centre[0] + self.radius > ray.origin[0]:
+        #         in_x = True
+        # else:
+        #     if self.centre[0] - self.radius < ray.origin[0]:
+        #         in_x = True
+
+        # in_y = False
+        # if not in_x:
+        #     if ray.direction[1] > 0.000001:
+        #         if self.centre[1] + self.radius > ray.origin[1]:
+        #             in_y = True
+        #     else:
+        #         if self.centre[1] - self.radius < ray.origin[1]:
+        #             in_y = True
+
+        # in_z = False
+        # if (not in_x) and (not in_y):
+        #     if ray.direction[2] > 0.000001:
+        #         if self.centre[2] + self.radius > ray.origin[2]:
+        #             in_z = True
+        #     else:
+        #         if self.centre[2] - self.radius < ray.origin[2]:
+        #             in_z = True
+
+        # if (not in_x) and (not in_y) and (not in_z):
+        #     return False, None
+
         C_to_O = ray.origin - self.centre
 
         H = ray.direction.dot(C_to_O)
