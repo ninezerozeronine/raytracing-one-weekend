@@ -16,11 +16,12 @@ from .renderable import World
 from .sphere import Sphere
 from .camera import Camera
 from . import materials
+from .sphere_group import SphereGroup
 
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 50
+PIXEL_SAMPLES = 350
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
@@ -82,7 +83,7 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = many_spheres_scene()
+    world, camera = many_spheres_scene_accelerated()
 
     img_data = {}
     pixel_coords = (
@@ -322,6 +323,47 @@ def many_spheres_scene():
         world.renderables.append(
             Sphere(numpy.array(sphere["pos"]), sphere["radius"], material)
         )
+
+    return world, camera
+
+
+def many_spheres_scene_accelerated():
+    cam_pos = numpy.array([13.0, 2.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.1
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    brown_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.4, 0.2, 0.1]))
+    glass_mat = materials.DielectricMaterial(1.5)
+    metal_mat = materials.MetalMaterial(numpy.array([0.7, 0.6, 0.5]), 0.0)
+
+    world = World()
+
+    # Ground
+    world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
+
+    # Brown, Glass, Metal
+    world.renderables.append(Sphere(numpy.array([-4.0, 1.0, 0.0]), 1.0, brown_mat))
+    world.renderables.append(Sphere(numpy.array([0.0, 1.0, 0.0]), 1.0, glass_mat))
+    world.renderables.append(Sphere(numpy.array([4.0, 1.0, 0.0]), 1.0, metal_mat))
+
+    with open("sphere_data.json") as file_handle:
+        sphere_data = json.load(file_handle)
+
+    all_spheres = SphereGroup()
+    for sphere in sphere_data:
+        material = materials.NormalToDiscreteRGBMaterial()
+        if sphere["material"] == "diffuse":
+            material = materials.PointOnHemiSphereMaterial(numpy.array(sphere["colour"]))
+        if sphere["material"] == "glass":
+            material = materials.DielectricMaterial(sphere["ior"])
+        if sphere["material"] == "metal":
+            material = materials.MetalMaterial(numpy.array(sphere["colour"]), sphere["fuzziness"])
+        all_spheres.add_sphere(sphere["pos"], sphere["radius"], material)
+
+    world.renderables.append(all_spheres)
 
     return world, camera
 
