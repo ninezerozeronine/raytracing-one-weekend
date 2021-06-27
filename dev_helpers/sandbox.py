@@ -142,6 +142,44 @@ dots = numpy.einsum("ij,ij->i", lots_a, lots_b)
     print(timeit.timeit(faster, setup=setup, number=10000))
 
 
+def numpy_dot_cross_speed_test():
+
+    setup = """
+import numpy
+RNG = numpy.random.default_rng()
+lots_a = RNG.random((50, 3))
+lots_b = RNG.random((50, 3))
+"""
+    dot_func = """
+dots = []
+for i in range(50):
+    dots.append(numpy.dot(lots_a[i], lots_b[i]))
+"""
+
+    dot_meth = """
+dots = []
+for i in range(50):
+    dots.append(lots_a[i].dot(lots_b[i]))
+    """
+
+    cross_func = """
+crosses = []
+for i in range(50):
+    crosses.append(numpy.cross(lots_a[i], lots_b[i]))
+"""
+
+    cross_meth = """
+crosses = []
+for i in range(50):
+    crosses.append(lots_a[i].cross(lots_b[i]))
+    """
+
+    print(timeit.timeit(dot_func, setup=setup, number=10000))
+    print(timeit.timeit(dot_meth, setup=setup, number=10000))
+    # print(timeit.timeit(cross_func, setup=setup, number=1000))
+    # print(timeit.timeit(cross_meth, setup=setup, number=1000))
+
+
 def numpy_vectorise_tests():
     t_min = 0.0001
     t_max = 5000
@@ -226,10 +264,10 @@ def numpy_vectorise_tests():
     # print(test_smaller_ts)
 
 
-
 main.main()
 # write_sphere_json()
 # numpy_speedup_test()
+# numpy_dot_cross_speed_test()
 # numpy_vectorise_tests()
 
 

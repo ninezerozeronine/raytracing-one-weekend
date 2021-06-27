@@ -14,14 +14,16 @@ import humanize
 from .ray import Ray
 from .renderable import World
 from .sphere import Sphere
+from .sphere_group import SphereGroup
+from .mttriangle import MTTriangle
 from .camera import Camera
 from . import materials
-from .sphere_group import SphereGroup
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 350
+PIXEL_SAMPLES = 50
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
@@ -83,7 +85,7 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = many_spheres_scene_accelerated()
+    world, camera = mttriangles_scene()
 
     img_data = {}
     pixel_coords = (
@@ -353,6 +355,7 @@ def many_spheres_scene_accelerated():
         sphere_data = json.load(file_handle)
 
     all_spheres = SphereGroup()
+    print(len(sphere_data))
     for sphere in sphere_data:
         material = materials.NormalToDiscreteRGBMaterial()
         if sphere["material"] == "diffuse":
@@ -366,6 +369,60 @@ def many_spheres_scene_accelerated():
     world.renderables.append(all_spheres)
 
     return world, camera
+
+
+def mttriangles_scene():
+    cam_pos = numpy.array([0.0, 1.0, 6.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    brown_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.4, 0.2, 0.1]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.6, 0.15]))
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+
+    world = World()
+
+    # Ground
+    world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
+
+    # Brown sphere
+    world.renderables.append(Sphere(numpy.array([-1.0, 0.5, 0.0]), 0.5, brown_mat))
+
+    # Blue triangle
+    world.renderables.append(MTTriangle(
+        numpy.array([1.0, 0.0, 0.0]),
+        numpy.array([2.0, 0.0, 0.0]),
+        numpy.array([1.0, 2.0, 0.0]),
+        blue_mat
+    ))
+
+    # Green triangle
+    world.renderables.append(MTTriangle(
+        numpy.array([-2.5, 0.0, 0.0]),
+        numpy.array([-1.5, 0.0, 0.0]),
+        numpy.array([-2.0, 0.75, 0.0]),
+        green_mat
+    ))
+
+    # Mirror triangle
+    offset = numpy.array([0.0, 0.0, -2.0])
+    world.renderables.append(MTTriangle(
+        numpy.array([-2.0, 0.0, -1.0]) + offset,
+        numpy.array([2.0, 0.0, 1.0]) + offset,
+        numpy.array([0.0, 2.0, 0.0]) + offset,
+        metal_mat
+    ))
+
+    return world, camera
+
+
 
 
 def get_ray_colour(ray, world, depth):
