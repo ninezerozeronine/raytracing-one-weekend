@@ -55,7 +55,7 @@ class MTTriangle():
         # coordinate space and coalculating matrix determinants - all
         # very fancy.
         p_vec = numpy.cross(ray.direction, self.B)
-        determinant = numpy.dot(self.A, p_vec)
+        determinant = self.A.dot(p_vec)
 
         # Check if the ray and triangle are parallel
         if abs(determinant) < 0.00001:
@@ -65,16 +65,16 @@ class MTTriangle():
 
         t_vec = ray.origin - self.pt0
 
-        u = numpy.dot(t_vec, p_vec) * inverse_determinant
+        u = t_vec.dot(p_vec) * inverse_determinant
         if (u > 1) or (u < 0):
             return False, None
 
         q_vec = numpy.cross(t_vec, self.A)
-        v = numpy.dot(ray.direction, q_vec) * inverse_determinant
+        v = ray.direction.dot(q_vec) * inverse_determinant
         if (v < 0) or ((u + v) > 1):
             return False, None
 
-        t = numpy.dot(self.B, q_vec) * inverse_determinant
+        t = self.B.dot(q_vec) * inverse_determinant
         # Check if t is within range (this also culls triangles behind
         # the camera)
         if t < t_min or t > t_max:
