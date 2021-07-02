@@ -52,7 +52,7 @@ class MTTriangle():
         # This is more or less magic which I don't understand - there's
         # lots of detail in the scratachapixel article about how this
         # relates to transforming the triangle into barycentric
-        # coordinate space and coalculating matrix determinants - all
+        # coordinate space and calculating matrix determinants - all
         # very fancy.
         p_vec = numpy.cross(ray.direction, self.B)
         determinant = self.A.dot(p_vec)

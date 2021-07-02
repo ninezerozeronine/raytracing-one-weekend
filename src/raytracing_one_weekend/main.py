@@ -385,6 +385,7 @@ def mttriangles_scene():
     brown_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.4, 0.2, 0.1]))
     blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
     green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.6, 0.15]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.1, 0.1]))
     metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
 
     world = World()
@@ -394,6 +395,9 @@ def mttriangles_scene():
 
     # Brown sphere
     world.renderables.append(Sphere(numpy.array([-1.0, 0.5, 0.0]), 0.5, brown_mat))
+
+    # Red sphere
+    world.renderables.append(Sphere(numpy.array([-2.3, 0.3, -0.4]), 0.3, red_mat))
 
     # Blue triangle
     world.renderables.append(MTTriangle(
@@ -455,20 +459,6 @@ def get_ray_colour(ray, world, depth):
 
         # Lerp between white and blue based on mapped Y
         return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
-
-
-def normal_to_rgb(normal):
-    """
-    Convert a normal to an rgb colour.
-
-    Expects unit length normal.
-    """
-
-    return numpy.array([
-            normal[0] + 1.0,
-            normal[1] + 1.0,
-            normal[2] + 1.0,
-        ]) * 0.5
 
 
 def main():

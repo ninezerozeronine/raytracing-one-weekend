@@ -6,9 +6,12 @@ import random
 import pprint
 import json
 import timeit
+from textwrap import dedent
+
 
 import numpy
 import humanize
+
 
 RNG = numpy.random.default_rng()
 
@@ -117,67 +120,90 @@ def numpy_speedup_test():
 
     print(a_vecs ** 2)
 
-    setup = """
-import numpy
-RNG = numpy.random.default_rng()
-lots_a = RNG.random((50, 3))
-lots_b = RNG.random((50, 3))
-"""
-    slow = """
-dots = []
-for i in range(50):
-    dots.append(numpy.dot(lots_a[i], lots_b[i]))
-"""
+    setup = dedent("""
+    import numpy
+    RNG = numpy.random.default_rng()
+    lots_a = RNG.random((50, 3))
+    lots_b = RNG.random((50, 3))
+    """)
 
-    fast = """
-dots = numpy.sum(lots_a * lots_b, axis=1)
-    """
+    slow = dedent("""
+    dots = []
+    for i in range(50):
+        dots.append(numpy.dot(lots_a[i], lots_b[i]))
+    """)
 
-    faster = """
-dots = numpy.einsum("ij,ij->i", lots_a, lots_b)
-"""
+    fast = dedent("""
+    dots = numpy.sum(lots_a * lots_b, axis=1)
+    """)
+
+    faster = dedent("""
+    dots = numpy.einsum("ij,ij->i", lots_a, lots_b)
+    """)
 
     print(timeit.timeit(slow, setup=setup, number=10000))
     print(timeit.timeit(fast, setup=setup, number=10000))
     print(timeit.timeit(faster, setup=setup, number=10000))
 
 
-def numpy_dot_cross_speed_test():
-
-    setup = """
-import numpy
-RNG = numpy.random.default_rng()
-lots_a = RNG.random((50, 3))
-lots_b = RNG.random((50, 3))
-"""
-    dot_func = """
-dots = []
-for i in range(50):
-    dots.append(numpy.dot(lots_a[i], lots_b[i]))
-"""
-
-    dot_meth = """
-dots = []
-for i in range(50):
-    dots.append(lots_a[i].dot(lots_b[i]))
+def numpy_dot_speed_test():
+    """
+    ndarraysa dont have a .cross method
     """
 
-    cross_func = """
-crosses = []
-for i in range(50):
-    crosses.append(numpy.cross(lots_a[i], lots_b[i]))
-"""
+    setup = dedent("""
+    import numpy
+    RNG = numpy.random.default_rng()
+    lots_a = RNG.random((50, 3))
+    lots_b = RNG.random((50, 3))
+    """)
 
-    cross_meth = """
-crosses = []
-for i in range(50):
-    crosses.append(lots_a[i].cross(lots_b[i]))
-    """
+    dot_func = dedent("""
+    dots = []
+    for i in range(50):
+        dots.append(numpy.dot(lots_a[i], lots_b[i]))
+    """)
+
+    dot_meth = dedent("""
+    dots = []
+    for i in range(50):
+        dots.append(lots_a[i].dot(lots_b[i]))
+    """)
 
     print(timeit.timeit(dot_func, setup=setup, number=10000))
     print(timeit.timeit(dot_meth, setup=setup, number=10000))
-    # print(timeit.timeit(cross_func, setup=setup, number=1000))
-    # print(timeit.timeit(cross_meth, setup=setup, number=1000))
+
+
+def numpy_preallocate_speed_test():
+    setup = dedent("""
+    import numpy
+    RNG = numpy.random.default_rng()
+    lots_a = RNG.random((5000, 3), dtype=numpy.float64)
+    lots_b = RNG.random((5000, 3), dtype=numpy.float64)
+    res = numpy.full(5000, 0.1234, dtype=numpy.float64)
+    """)
+
+    no_pre_sum = dedent("""
+    dots = numpy.sum(lots_a * lots_b, axis=1)
+    dots[0] = 1.2
+    """)
+
+    pre_sum = dedent("""
+    numpy.sum(lots_a * lots_b, axis=1, out=res)
+    """)
+
+    no_pre_ein = dedent("""
+    dots = numpy.einsum("ij,ij->i", lots_a, lots_b)
+    """)
+
+    pre_ein = dedent("""
+    numpy.einsum("ij,ij->i", lots_a, lots_b, out=res)
+    """)
+
+    print(timeit.timeit(no_pre_sum, setup=setup, number=10000))
+    print(timeit.timeit(pre_sum, setup=setup, number=10000))
+    print(timeit.timeit(no_pre_ein, setup=setup, number=10000))
+    print(timeit.timeit(pre_ein, setup=setup, number=10000))
 
 
 def numpy_vectorise_tests():
@@ -267,6 +293,7 @@ def numpy_vectorise_tests():
 main.main()
 # write_sphere_json()
 # numpy_speedup_test()
+# numpy_preallocate_speed_test()
 # numpy_dot_cross_speed_test()
 # numpy_vectorise_tests()
 
