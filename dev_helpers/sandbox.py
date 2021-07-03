@@ -290,8 +290,201 @@ def numpy_vectorise_tests():
     # print(test_smaller_ts)
 
 
-main.main()
+def numpy_triangle_vectorise():
+    directions = numpy.array([
+        [1.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+    ])
+
+    dottest0 = numpy.array([
+        [1.0, 2.0, 3.0],
+        [4.0, -5.0, 6.0]
+    ])
+
+    dottest1 = numpy.array([
+        [1.0, 1.0, 1.0],
+        [2.0, 1.0, 0.0]
+    ])
+
+    #print(dottest0.dot(dottest1))
+    # print(numpy.einsum("ij,ij->i", dottest0, dottest1))
+
+    # mask = dottest0[:, 2] > 4.0
+    # print(mask)
+    # print(numpy.logical_and(mask, numpy.array([True, True])))
+    # print(numpy.einsum("ij,ij->i", dottest0[mask], dottest1[mask]))
+
+
+    tBs = numpy.array([
+        [0.0, 1.0, 0.0],
+        [0.0, -1.0, 0.0],
+        [0.0, 2.0, 0.0]
+    ])
+
+    tAs = numpy.array([
+        [0.0, 1.0, 0.0],
+        [0.0, -1.0, 0.0],
+        [0.0, 2.0, 0.0]
+    ])
+
+    # print(numpy.array([5.0, 5.0, 5.0]) - tBs)
+    # print(numpy.array([5.0, 5.0, 5.0]) * numpy.array([1.0, 2.0, 3.0]))
+    # mask = numpy.array([5.0, 6.0, 7.0]) > 5.5
+    # print(1/numpy.array([1, 2, 3])[mask])
+
+
+    tp_vecs = numpy.cross(directions, tBs)
+    # print(p_vecs)
+
+    tdets = numpy.einsum("ij,ij->i", tAs, tp_vecs)
+    # print(dets)
+
+    triangles = [
+        # 0 at the back
+        [
+            [-1.0, 0.0, -3.0],
+            [1.0, 0.0, -3.0],
+            [0.0, 2.0, -3.1],
+        ],
+
+        # 1 in the air
+        [
+            [-1.0, 2.0, -2.0],
+            [1.0, 2.0, -2.0],
+            [0.0, 4.0, -2.1],
+        ],
+
+        # 2 hit this one
+        [
+            [-1.0, 0.0, -1.0],
+            [1.0, 0.0, -1.0],
+            [0.0, 2.0, -1.1],
+        ],
+
+        # 3 behind ray
+        [
+            [-1.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 2.0, 1.1],
+        ],
+
+        # 4 parallel to ray
+        [
+            [0.0, 0.0, -4.0],
+            [0.0, 0.0, -6.0],
+            [0.0, 2.0, -5.0],
+        ],
+
+
+    ]
+
+    pt0s = numpy.array([
+        triangles[0][0],
+        triangles[1][0],
+        triangles[2][0],
+        triangles[3][0],
+        triangles[4][0],
+    ])
+
+    pt1s = numpy.array([
+        triangles[0][1],
+        triangles[1][1],
+        triangles[2][1],
+        triangles[3][1],
+        triangles[4][1],
+    ])
+
+    pt2s = numpy.array([
+        triangles[0][2],
+        triangles[1][2],
+        triangles[2][2],
+        triangles[3][2],
+        triangles[4][2],
+    ])
+
+    direction = numpy.array([0.0, 0.0, -1.0])
+    origin = numpy.array([0.0, 0.1, 0.0])
+    t_min = 0.00001
+    t_max = 5000.0
+    As = pt1s - pt0s
+    Bs = pt2s - pt0s
+    normals = numpy.cross(As, Bs)
+    # print(normals)
+    # https://stackoverflow.com/questions/2850743/numpy-how-to-quickly-normalize-many-vectors
+    normals /= numpy.sqrt((normals*normals).sum(axis=1))[..., numpy.newaxis]
+    # print(normals)
+
+    p_vecs = numpy.cross(direction, Bs)
+    dets = numpy.einsum("ij,ij->i", As, p_vecs)
+    print(dets)
+    valid_tri_idxs = numpy.absolute(dets) > 0.00001
+    print(valid_tri_idxs)
+
+    inv_dets = numpy.zeros_like(dets)
+    inv_dets[valid_tri_idxs] = 1.0/dets[valid_tri_idxs]
+
+    t_vecs = origin - pt0s
+
+    Us = numpy.zeros_like(dets)
+    Us[valid_tri_idxs] = numpy.einsum(
+        "ij,ij->i",
+        t_vecs[valid_tri_idxs],
+        p_vecs[valid_tri_idxs]
+    ) * inv_dets[valid_tri_idxs]
+    # print(Us)
+    valid_tri_idxs = numpy.logical_and(
+        valid_tri_idxs,
+        numpy.logical_not(numpy.logical_or(Us > 1.0, Us < 0))
+    )
+
+    print(valid_tri_idxs)
+
+    q_vecs = numpy.cross(t_vecs, As)
+    Vs = numpy.zeros_like(dets)
+    Vs[valid_tri_idxs] = numpy.einsum(
+        "ij,j->i",
+        q_vecs[valid_tri_idxs],
+        direction
+    ) * inv_dets[valid_tri_idxs]
+    valid_tri_idxs = numpy.logical_and(
+        valid_tri_idxs,
+        numpy.logical_not(numpy.logical_or(Vs < 0.0, (Us + Vs) > 1.0))
+    )
+
+    print(valid_tri_idxs)
+
+    Ts = numpy.zeros_like(dets)
+    Ts[valid_tri_idxs] = numpy.einsum(
+        "ij,ij->i",
+        Bs[valid_tri_idxs],
+        q_vecs[valid_tri_idxs]
+    ) * inv_dets[valid_tri_idxs]
+    print(Ts)
+
+    valid_t_idxs = numpy.asarray(
+        numpy.logical_not(numpy.logical_or(Ts < t_min, Ts > t_max))
+    ).nonzero()[0]
+    if valid_t_idxs.size > 0:
+        smallest_t_index = valid_t_idxs[Ts[valid_t_idxs].argmin()]
+        smallest_t = Ts[smallest_t_index]
+    else:
+        print("No valid hits")
+        return None
+
+    print(smallest_t)
+    print(smallest_t_index)
+
+    valid_tri_idxs = numpy.logical_and(
+        valid_tri_idxs,
+        numpy.logical_not(numpy.logical_or(Ts < t_min, Ts > t_max))
+    )
+
+    print(valid_tri_idxs)
+
+# main.main()
 # write_sphere_json()
+numpy_triangle_vectorise()
 # numpy_speedup_test()
 # numpy_preallocate_speed_test()
 # numpy_dot_cross_speed_test()
