@@ -16,18 +16,20 @@ from .renderable import World
 from .sphere import Sphere
 from .sphere_group import SphereGroup
 from .mttriangle import MTTriangle
+from .mttriangle_group import MTTriangleGroup
+from .obj_tri_mesh import OBJTriMesh
 from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 50
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
-MAX_DEPTH = 10
+MAX_DEPTH = 5
 
 
 def generate_test_image():
@@ -85,7 +87,7 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = mttriangles_scene()
+    world, camera = bunny_scene()
 
     img_data = {}
     pixel_coords = (
@@ -427,6 +429,142 @@ def mttriangles_scene():
     return world, camera
 
 
+def mttriangles_scene_accelerated():
+    cam_pos = numpy.array([6.0, 3.0, 6.0])
+    cam_lookat = numpy.array([0.0, 0.3, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 25.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    brown_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.4, 0.2, 0.1]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.6, 0.15]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.1, 0.1]))
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+
+    world = World()
+
+    # Ground
+    world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
+
+    # Brown sphere
+    world.renderables.append(Sphere(numpy.array([-1.0, 0.5, 0.0]), 0.5, brown_mat))
+
+    # Red sphere
+    world.renderables.append(Sphere(numpy.array([-2.3, 0.3, -0.4]), 0.3, red_mat))
+
+    tri_grp = MTTriangleGroup()
+
+    for x in range(10):
+        for y in range(10):
+            for z in range(10):
+                offset = numpy.array([x/10, y/10, z/10])
+                tri_grp.add_triangle(
+                    numpy.array([-0.1, 0.0, 0.0]) + offset,
+                    numpy.array([0.1, 0.0, 0.0]) + offset,
+                    numpy.array([0.0, 0.1, 0.0]) + offset,
+                    blue_mat
+                )
+
+    world.renderables.append(tri_grp)
+
+    return world, camera
+
+
+def bunny_scene():
+    cam_pos = numpy.array([-2.0, 3.5, 8.0])
+    cam_lookat = numpy.array([-0.5, 1.7, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 53.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    brown_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.4, 0.2, 0.1]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.2, 0.5]))
+    green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.1, 0.6, 0.15]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.8, 0.1, 0.1]))
+    metal_mat = materials.MetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    glass_mat = materials.DielectricMaterial(1.5)
+    normal_mat = materials.NormalToRGBMaterial()
+
+    world = World()
+
+    # Ground
+    world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
+
+    # Metal sphere
+    world.renderables.append(Sphere(numpy.array([-3.5, 1.0, -1.5]), 1.0, metal_mat))
+
+    # Glass sphere
+    world.renderables.append(Sphere(numpy.array([-0.7, 3.0, 5.5]), 0.4, glass_mat))
+
+    # Normal sphere
+    world.renderables.append(Sphere(numpy.array([-2.6, 0.4, 0.5]), 0.4, normal_mat))
+
+    # As there are fewer spheres, the above is actually faster...
+    # all_spheres = SphereGroup()
+
+    # # Ground
+    # all_spheres.add_sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat)
+
+    # # Metal sphere
+    # all_spheres.add_sphere(numpy.array([-3.5, 1.0, -1.5]), 1.0, metal_mat)
+
+    # # Glass sphere
+    # all_spheres.add_sphere(numpy.array([-0.85, 3.0, 5.5]), 0.3, glass_mat)
+
+    # world.renderables.append(all_spheres)
+
+
+
+    tri_grp = MTTriangleGroup()
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("bunny.obj")
+
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    # all_spheres = SphereGroup()
+    # for vertex in obj_mesh.vertices:
+    #     print(vertex)
+    #     all_spheres.add_sphere(
+    #         [vertex[0], vertex[1] - smallest_y, vertex[2]],
+    #         0.2,
+    #         blue_mat
+    #     )
+
+    # world.renderables.append(all_spheres)
+
+    for triangle in obj_mesh.faces:
+        tri_grp.add_triangle(
+            numpy.array([
+                obj_mesh.vertices[triangle[0][0]][0],
+                obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[0][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[1][0]][0],
+                obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[1][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[2][0]][0],
+                obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[2][0]][2],
+            ]),
+            blue_mat
+        )
+
+    world.renderables.append(tri_grp)
+
+    return world, camera
 
 
 def get_ray_colour(ray, world, depth):

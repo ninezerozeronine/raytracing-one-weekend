@@ -17,7 +17,7 @@ RNG = numpy.random.default_rng()
 
 sys.path.append(os.path.abspath("../src"))
 
-from raytracing_one_weekend import main
+from raytracing_one_weekend import main, mttriangle_group, obj_tri_mesh
 
 
 def write_sphere_json():
@@ -482,9 +482,88 @@ def numpy_triangle_vectorise():
 
     print(valid_tri_idxs)
 
-# main.main()
+    print(numpy.mean(
+        numpy.concatenate((pt0s, pt1s, pt2s), axis=0),
+        axis=0
+    ))
+
+
+def mttri_grp_test():
+    triangles = [
+        # 0 at the back
+        [
+            [-1.0, 0.0, -3.0],
+            [1.0, 0.0, -3.0],
+            [0.0, 2.0, -3.1],
+        ],
+
+        # 1 in the air
+        [
+            [-1.0, 2.0, -2.0],
+            [1.0, 2.0, -2.0],
+            [0.0, 4.0, -2.1],
+        ],
+
+        # 2 hit this one
+        [
+            [-1.0, 0.0, -1.0],
+            [1.0, 0.0, -1.0],
+            [0.0, 2.0, -1.1],
+        ],
+
+        # 3 behind ray
+        [
+            [-1.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 2.0, 1.1],
+        ],
+
+        # 4 parallel to ray
+        [
+            [0.0, 0.0, -4.0],
+            [0.0, 0.0, -6.0],
+            [0.0, 2.0, -5.0],
+        ],
+    ]
+
+    grp = mttriangle_group.MTTriangleGroup()
+    for triangle in triangles:
+        grp.add_triangle(
+            numpy.array(triangle[0]),
+            numpy.array(triangle[1]),
+            numpy.array(triangle[2]),
+            None
+        )
+
+    print(grp.bounds_centre)
+    print(grp.bounds_radius)
+
+
+def test_obj_read():
+    obj_mesh = obj_tri_mesh.OBJTriMesh()
+    obj_mesh.read("bunny.obj")
+
+    for triangle in obj_mesh.faces[0:1]:
+        print(triangle)
+        print(obj_mesh.vertices[triangle[0][0]][0])
+        print(obj_mesh.vertices[triangle[0][0]][1])
+        print(obj_mesh.vertices[triangle[0][0]][2])
+        print("-")
+        print(obj_mesh.vertices[triangle[1][0]][0])
+        print(obj_mesh.vertices[triangle[1][0]][1])
+        print(obj_mesh.vertices[triangle[1][0]][2])
+        print("-")
+        print(obj_mesh.vertices[triangle[2][0]][0])
+        print(obj_mesh.vertices[triangle[2][0]][1])
+        print(obj_mesh.vertices[triangle[2][0]][2])
+        print(" ")
+
+
+main.main()
+# test_obj_read()
 # write_sphere_json()
-numpy_triangle_vectorise()
+# numpy_triangle_vectorise()
+# mttri_grp_test()
 # numpy_speedup_test()
 # numpy_preallocate_speed_test()
 # numpy_dot_cross_speed_test()
