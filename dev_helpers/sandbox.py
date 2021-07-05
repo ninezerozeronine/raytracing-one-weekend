@@ -559,7 +559,27 @@ def test_obj_read():
         print(" ")
 
 
-main.main()
+def ray_parallelisation_test():
+    rays = numpy.array(
+        [
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+        ]
+    )
+
+    centres = numpy.array(
+        [
+            [7.0, 7.0, 7.0],
+            [8.0, 8.0, 8.0],
+            [9.0, 9.0, 9.0],
+        ]
+    )
+
+    print(rays*centres)
+
+
+# main.main()
+ray_parallelisation_test()
 # test_obj_read()
 # write_sphere_json()
 # numpy_triangle_vectorise()

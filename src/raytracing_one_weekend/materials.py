@@ -4,6 +4,7 @@ Materials for the objects in a scene.
 (As per the renderable we don't use a base class because that slows down execution)
 """
 import random
+import math
 
 import numpy
 
@@ -31,6 +32,78 @@ AXIS_COLOUR_PAIRS = [
     (numpy.array([0.0, 0.0, -1.0]), numpy.array([0.0, 1.0, 1.0])),
 ]
 
+
+
+class PointOnHemiSphereCheckerboardMaterial():
+    """
+    Scatter rays towards points on a hemisphere at the hit point.
+
+    This provides a good approximation to the lambert shading model.
+
+    This comes from https://raytracing.github.io/books/RayTracingInOneWeekend.html#diffusematerials/analternativediffuseformulation.
+
+    A scattered ray bounces off the hitpoint, aiming toward a
+    random point on the surface of a hemisphere with the centre of it's
+    flat side at the hit point, and the centre/top of the dome pointing
+    in the direction of the normal at that point of the surface.
+    """
+
+    def __init__(self, scale, offset, colour_a, colour_b):
+        """
+        Initialise the object.
+
+        Args:
+        """
+
+        self.scale = scale
+        self.offset = offset
+        self.colour_a = colour_a
+        self.colour_b = colour_b
+
+    def scatter(self, in_ray, hit_record):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+
+        absorbed = False
+        scatter_direction = random_vec_in_unit_hemisphere(hit_record.normal)
+        # Catch if our randomly generated direction vector is very close to
+        # zero
+        if scatter_direction.dot(scatter_direction) < 0.000001:
+            scatter_direction = hit_record.normal
+        scattered_ray = Ray(
+            hit_record.hit_point,
+            scatter_direction
+        )
+
+        ret_colour = None
+        if (
+                (abs(math.floor(hit_record.hit_point[0] * self.scale[0] + self.offset[0])) % 2)
+                ^ (abs(math.floor(hit_record.hit_point[1] * self.scale[1] + self.offset[1])) % 2)
+                ^ (abs(math.floor(hit_record.hit_point[2] * self.scale[2] + self.offset[2])) % 2)
+                ):
+            ret_colour = self.colour_a
+        else:
+            ret_colour = self.colour_b
+
+        return (
+            absorbed,
+            ret_colour,
+            scattered_ray,
+        )
 
 
 class PointOnHemiSphereMaterial():
