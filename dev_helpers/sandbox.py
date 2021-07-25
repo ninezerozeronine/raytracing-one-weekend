@@ -7,6 +7,7 @@ import pprint
 import json
 import timeit
 from textwrap import dedent
+from math import sqrt
 
 
 import numpy
@@ -144,6 +145,27 @@ def numpy_speedup_test():
     print(timeit.timeit(slow, setup=setup, number=10000))
     print(timeit.timeit(fast, setup=setup, number=10000))
     print(timeit.timeit(faster, setup=setup, number=10000))
+
+
+def mask_speed_test():
+    setup = dedent("""
+    import numpy
+    RNG = numpy.random.default_rng()
+    nums = RNG.random((50000, 3))
+    """)
+
+    no_mask = dedent("""
+    sqrts = numpy.sqrt(numpy.maximum(0.00001, nums))
+    """)
+
+    mask = dedent("""
+    res = numpy.full_like(nums, 10.0)
+    mask = nums > 0.00001
+    res[mask] = numpy.sqrt(nums[mask])
+    """)
+
+    print(timeit.timeit(no_mask, setup=setup, number=1000))
+    print(timeit.timeit(mask, setup=setup, number=1000))
 
 
 def numpy_dot_speed_test():
@@ -559,34 +581,287 @@ def test_obj_read():
         print(" ")
 
 
-def ray_parallelisation_test():
-    rays = numpy.array(
+def numpy_axis_combo_tests():
+
+    As = numpy.array(
         [
             [1.0, 2.0, 3.0],
             [4.0, 5.0, 6.0],
+            # [7.0, 8.0, 9.0],
         ]
     )
 
-    centres = numpy.array(
+    Bs = numpy.array(
         [
+            [6.0, 6.0, 6.0],
             [7.0, 7.0, 7.0],
             [8.0, 8.0, 8.0],
             [9.0, 9.0, 9.0],
         ]
     )
 
-    print(rays*centres)
+    Cs = numpy.array([0.1, 0.2, 0.3, 0.4])
+
+    # print(As[:])
+    # print("-")
+    # print(As[:, numpy.newaxis])
+    # print("-")
+    # print(As[numpy.newaxis, :])
+
+    # # Dot products
+    # # Need to test einsum here!
+    # print("dot")
+    # print(As[0].dot(Bs[0]))
+    # print(As.dot(Bs.T)[0, 0])
+    # print(As[1].dot(Bs[3]))
+    # print(As.dot(Bs.T)[1, 3])
+    # print("")
+
+    # # Cross Products
+    # print("cross")
+    # print(numpy.cross(As[0], Bs[0]))
+    # print(numpy.cross(As[:, numpy.newaxis], Bs)[0, 0])
+
+    # print(numpy.cross(As[0], Bs[3]))
+    # print(numpy.cross(As[:, numpy.newaxis], Bs)[0, 3])
+
+    # print(numpy.cross(As[1], Bs[1]))
+    # print(numpy.cross(As[:, numpy.newaxis], Bs)[1, 1])
+    # print("")
+
+    # Adding
+    print("add")
+    print(As[0] + (Bs[0]))
+    res = As[:, numpy.newaxis] + Bs
+    print(res[0, 0])
+    print(res.shape)
+    print("-")
+
+    print(As[1] + (Bs[3]))
+    res = As[:, numpy.newaxis] + Bs
+    print(res[1, 3])
+    print("-")
+    print(res)
+    print("")
+
+    single = numpy.array([1.0, 2.0, 3.0], dtype=numpy.single)
+    grid = numpy.array(
+        [
+            [1.0, 1.0, 0.0],
+            [2.0, 0.0, 2.0],
+            [0.0, 3.0, 3.0],
+        ],
+        dtype=numpy.single
+    )
+
+    res = numpy.einsum("i,ki", single, grid)
+    print(res)
+
+    vecs = numpy.array(
+        [
+            [1, 2, 3],
+            [4, 5, 6],
+        ],
+        dtype=numpy.single
+    )
+    vec_grid = numpy.array(
+        [
+            [
+                [1, 1, 0],
+                [2, 0, 2],
+                [0, 3, 3],
+                [4, 4, 4],
+            ],
+            [
+                [5, 0, 0],
+                [0, 6, 0],
+                [0, 0, 7],
+                [8, 8, 8],
+            ],
+        ]
+    )
+    res = numpy.einsum("...i,...ki", vecs, vec_grid)
+    print(res)
+
+
+    vec_grid1 = numpy.array(
+        [
+            [
+                [1, 2, 3],
+                [4, 5, 6],
+                [0, 3, 3],
+                [4, 4, 4],
+            ],
+            [
+                [5, 0, 0],
+                [0, 6, 0],
+                [0, 0, 7],
+                [3, 0, 8],
+            ],
+        ]
+    )
+    vec_grid2 = numpy.array(
+        [
+            [
+                [1, 1, 1],
+                [0, 0, 2],
+                [0, 3, 3],
+                [4, 4, 4],
+            ],
+            [
+                [5, 0, 0],
+                [0, 6, 0],
+                [0, 0, 7],
+                [0, 9, 8],
+            ],
+        ]
+    )
+
+    res = numpy.einsum("...ij,...ij->...i", vec_grid1, vec_grid2)
+    print(res)
+
+    vals = numpy.array([1, 2, 3, 4], dtype=numpy.single)
+    val_grid = numpy.array(
+        [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+        ],
+        dtype=numpy.single
+    )
+    # res = val_grid[:, numpy.newaxis] - vals**2
+    res = val_grid - vals**2
+    print(res)
+
+
+
+    # print(res)
+    # print("")
+
+    # Find the smallest dot product using the second A
+    # dots = As.dot(Bs.T)
+    # print(dots)
+    # index = numpy.argmin(dots, axis=1)
+    # print(index)
+    # print(dots[index])
+
+
+    # print(As[:, None] * Bs)
+    # print(numpy.multiply.outer(As, Bs))
+
+def ray_parallelisation_test():
+    dtype = numpy.single
+    ray_origins = numpy.array(
+        [
+            [4.5, 0.0, -2.0],
+            [3.5, 0.0, -2.0],
+            [2.0, 0.0, -2.0],
+            [5.0, 0.0, 5.0],
+            [0.0, 0.0, 0.0],
+            [11, 0, 5],
+        ],
+        dtype=dtype
+    )
+    ray_dirs = numpy.array(
+        [
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
+            [-1.0, 0.0, 0.0],
+            [-sqrt(2)/2.0, 0.0, -sqrt(2)/2.0],
+            [0.0, 0.0, -1.0],
+        ],
+        dtype=dtype
+    )
+    sphere_centres = numpy.array(
+        [
+            [5, 0, -5],
+            [5, 0, -8],
+            [3, 0, 3],
+            [10, 0, 0],
+        ],
+        dtype=dtype
+    )
+    sphere_radii = numpy.array(
+        [
+            1,
+            2,
+            3,
+            1.000001,
+        ],
+        dtype=dtype
+    )
+
+    # This is a grid of vectors num_rays by num_spheres in size
+    # It's every origin minus every sphere centre
+    #
+    #    C0    C1    C2
+    #    -----------------
+    # R0|R0-C0 R0-C1 R0-C2
+    # R1|R1-C0 R1-C1 R1-C2
+    C_to_Os = ray_origins[:, numpy.newaxis] - sphere_centres
+
+    # This is a grid of scalars num_rays by num_spheres in size
+    # It's as if we take the C_to_Os gris, and then for each row
+    # (which corresponds to a ray), find the dot product of the ray for
+    # that row and each C_to_O
+    #
+    #    C0         C1         C2
+    #    --------------------------------
+    # R0|R0.(R0-C0) R0.(R0-C1) R0.(R0-C2)
+    # R1|R1.(R1-C0) R1.(R1-C1) R1.(R1-C2)
+    Hs = numpy.einsum("...i,...ki", ray_dirs, C_to_Os)
+
+    # This is a grid of scalars num_rays by num_spheres in size.
+    # It's the dot product of each C_to_O with itself, minus the radius
+    # of the sphere for that column squared
+    #
+    #    S0                 S1                 S2
+    #    ------------------------------------------------------
+    # R0|C20.C20 - S0.r^2   C20.C20 - S1.r^2   C20.C20 - S2.r^2
+    # R1|C20.C20 - S0.r^2   C20.C20 - S1.r^2   C20.C20 - S2.r^2
+    Cs = numpy.einsum("...ij,...ij->...i", C_to_Os, C_to_Os) - sphere_radii**2
+
+
+    # This is a grid of scalars num_rays by num_spheres in size.
+    discriminants = numpy.square(Hs) - Cs
+
+    sqrt_discriminants = numpy.sqrt(numpy.maximum(0.00001, discriminants))
+    smaller_ts = -Hs - sqrt_discriminants
+    larger_ts = -Hs + sqrt_discriminants
+    ts = numpy.where(
+        (smaller_ts > 0.0) & (smaller_ts < larger_ts),
+        smaller_ts,
+        larger_ts
+    )
+    t_filter = (discriminants > 0.00001) & (ts > 0.00001)
+    final_ts = numpy.where(t_filter, ts, -1)
+    print(final_ts)
+
+
+    # print(discriminants)
+
+    # ray_index = 3
+    # sphere_index = 3
+    # C_to_O = ray_origins[ray_index] - sphere_centres[sphere_index]
+    # H = ray_dirs[ray_index].dot(C_to_O)
+    # C = C_to_O.dot(C_to_O) - sphere_radii[sphere_index]
+    # discriminant = H**2 - C
+    # print(discriminant)
+    # print(discriminants[ray_index, sphere_index])
+
 
 
 # main.main()
+# numpy_axis_combo_tests()
 ray_parallelisation_test()
+# mask_speed_test()
 # test_obj_read()
 # write_sphere_json()
 # numpy_triangle_vectorise()
 # mttri_grp_test()
 # numpy_speedup_test()
 # numpy_preallocate_speed_test()
-# numpy_dot_cross_speed_test()
+# numpy_dot_speed_test()
 # numpy_vectorise_tests()
 
 
