@@ -8,7 +8,7 @@ import json
 import timeit
 from textwrap import dedent
 from math import sqrt
-
+from functools import reduce
 
 import numpy
 import humanize
@@ -748,6 +748,7 @@ def numpy_axis_combo_tests():
     # print(As[:, None] * Bs)
     # print(numpy.multiply.outer(As, Bs))
 
+
 def ray_parallelisation_test():
     dtype = numpy.single
     ray_origins = numpy.array(
@@ -758,6 +759,7 @@ def ray_parallelisation_test():
             [5.0, 0.0, 5.0],
             [0.0, 0.0, 0.0],
             [11, 0, 5],
+            [5, 0, 10],
         ],
         dtype=dtype
     )
@@ -769,6 +771,7 @@ def ray_parallelisation_test():
             [-1.0, 0.0, 0.0],
             [-sqrt(2)/2.0, 0.0, -sqrt(2)/2.0],
             [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
         ],
         dtype=dtype
     )
@@ -778,6 +781,7 @@ def ray_parallelisation_test():
             [5, 0, -8],
             [3, 0, 3],
             [10, 0, 0],
+            [5, 0, 10],
         ],
         dtype=dtype
     )
@@ -787,6 +791,7 @@ def ray_parallelisation_test():
             2,
             3,
             1.000001,
+            2
         ],
         dtype=dtype
     )
@@ -834,8 +839,51 @@ def ray_parallelisation_test():
         larger_ts
     )
     t_filter = (discriminants > 0.00001) & (ts > 0.00001)
-    final_ts = numpy.where(t_filter, ts, -1)
+    final_ts = numpy.where(t_filter, ts, 101)
     print(final_ts)
+    print("-")
+
+    nearset_hits = reduce(numpy.minimum, final_ts.T)
+    print(nearset_hits)
+    print("-")
+
+
+    smallest_t_indecies = numpy.argmin(final_ts, axis=1)
+    print(smallest_t_indecies)
+    print(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies])
+    print(numpy.where(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies] < 100, smallest_t_indecies, -1))
+
+
+    # Now know for each ray if it hits a sphere, and if it does, where in space.
+    # For each hit need to:
+    # - Determine the scatter ray and queue it up for the next bounce
+    # - Determine the hit colour
+    
+
+
+
+
+
+
+
+    # valid_smallest = numpy.where()
+
+
+    # valid_idxs = numpy.transpose(numpy.nonzero(final_ts < 100))
+    # valid_idxs = numpy.nonzero(final_ts < 100)
+
+    # print(valid_idxs)
+    # print(final_ts[valid_idxs])
+
+    # mask = numpy.where(final_ts < 100)
+    # valid_idxs = numpy.nonzero(final_ts < 100)
+    # smallest_index = valid_idxs[final_ts[valid_idxs]]
+
+
+    # print(mask)
+    # print(mask[0])
+    # print(final_ts[final_ts < 100])
+    # print(numpy.argmin(final_ts[final_ts < 100], axis=1))
 
 
     # print(discriminants)
@@ -850,10 +898,39 @@ def ray_parallelisation_test():
     # print(discriminants[ray_index, sphere_index])
 
 
+def vec_subset_test():
+    valid = numpy.array(
+        [
+            True,
+            False,
+            True,
+            True,
+        ],
+        dtype=numpy.bool_
+    )
+
+    vecs = numpy.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [2, 2, 2],
+            [3, 3, 3],
+        ],
+        dtype=numpy.single
+    )
+
+    print(vecs)
+    vecs[valid] = vecs[valid] + 2
+    print(vecs)
+    new_data = vecs[valid] + 2
+    print(new_data)
+
+
 
 # main.main()
 # numpy_axis_combo_tests()
-ray_parallelisation_test()
+# ray_parallelisation_test()
+vec_subset_test()
 # mask_speed_test()
 # test_obj_read()
 # write_sphere_json()
