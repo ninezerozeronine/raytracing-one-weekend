@@ -733,6 +733,49 @@ def numpy_axis_combo_tests():
     print(res)
 
 
+def sphere_colour_test():
+
+    hit_indecies = numpy.array([3,2,-1,0])
+    colours = numpy.array([0,0,0,0])
+    sphere_colours = numpy.array([5,6,7,8])
+    print(hit_indecies)
+    print(colours)
+    print(sphere_colours)
+    ray_hits = hit_indecies > -1
+    ray_misses = hit_indecies < 0
+    colours[ray_hits] = sphere_colours[hit_indecies[ray_hits]]
+    print(colours)
+    print(colours[ray_hits])
+    print(colours[ray_misses])
+
+
+def ray_array_test():
+    width = 5
+    height = 3
+    samples = 2
+
+    ray_array = numpy.zeros((width, height, samples, 3), dtype=numpy.single)
+    count = 0
+    for y in range(height):
+        for x in range(width):
+            for s in range(samples):
+                ray_array[x, y, s] = [count, count, count]
+                count += 1
+
+    print(count - 1)
+    print(ray_array[4,2,1])
+    print(ray_array[1,1,0])
+    flattened = ray_array.reshape(-1, 3)
+    print(flattened.shape)
+    stacked = flattened.reshape(5,3,2,3)
+    print(stacked.shape)
+    print(stacked[4,2,1])
+    print(stacked[1,1,0])
+
+
+
+
+
 
     # print(res)
     # print("")
@@ -760,6 +803,7 @@ def ray_parallelisation_test():
             [0.0, 0.0, 0.0],
             [11, 0, 5],
             [5, 0, 10],
+            [5.5, 0, -2]
         ],
         dtype=dtype
     )
@@ -770,6 +814,7 @@ def ray_parallelisation_test():
             [0.0, 0.0, -1.0],
             [-1.0, 0.0, 0.0],
             [-sqrt(2)/2.0, 0.0, -sqrt(2)/2.0],
+            [0.0, 0.0, -1.0],
             [0.0, 0.0, -1.0],
             [0.0, 0.0, -1.0],
         ],
@@ -843,21 +888,43 @@ def ray_parallelisation_test():
     print(final_ts)
     print("-")
 
-    nearset_hits = reduce(numpy.minimum, final_ts.T)
-    print(nearset_hits)
-    print("-")
+    # nearset_hits = reduce(numpy.minimum, final_ts.T)
+    # print(nearset_hits)
+    # print("-")
 
-
+    # A 1D array num_rays long that contains the index of the
+    # sphere with the smallest t
     smallest_t_indecies = numpy.argmin(final_ts, axis=1)
     print(smallest_t_indecies)
-    print(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies])
-    print(numpy.where(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies] < 100, smallest_t_indecies, -1))
+
+    # A 1D array num_rays long containing the t values for each ray
+    smallest_ts = final_ts[numpy.arange(ray_origins.shape[0]), smallest_t_indecies]
+    print(smallest_ts)
+
+    # A 1D array num_rays long that contains the index of the
+    # sphere with the smallest t, or -1 if the ray hit no spheres
+    sphere_hit_indecies = numpy.where(
+        smallest_ts < 100,
+        smallest_t_indecies,
+        -1
+    )
+    print(sphere_hit_indecies)
 
 
-    # Now know for each ray if it hits a sphere, and if it does, where in space.
+
+
+    # smallest_t_indecies = numpy.argmin(final_ts, axis=1)
+    # print(smallest_t_indecies)
+    # print(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies])
+    # print(final_ts[numpy.arange(ray_origins.shape[0]), smallest_t_indecies])
+    # print(numpy.where(final_ts[(0, 1, 2, 3, 4, 5, 6), smallest_t_indecies] < 100, smallest_t_indecies, -1))
+
+
+    # Now know for each ray if it hits a sphere, and if it does, which sphere and how far along the ray the coliision is.
     # For each hit need to:
     # - Determine the scatter ray and queue it up for the next bounce
     # - Determine the hit colour
+
     
 
 
@@ -929,8 +996,10 @@ def vec_subset_test():
 
 # main.main()
 # numpy_axis_combo_tests()
-# ray_parallelisation_test()
-vec_subset_test()
+ray_parallelisation_test()
+# sphere_colour_test()
+# ray_array_test()
+# vec_subset_test()
 # mask_speed_test()
 # test_obj_read()
 # write_sphere_json()

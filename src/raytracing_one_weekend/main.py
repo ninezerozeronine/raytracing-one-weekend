@@ -151,6 +151,41 @@ def render():
     return img_data
 
 
+def numpy_render():
+
+    world, camera = bunnies_scene()
+
+    ray_origins = numpy.zeros(
+        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    )
+    ray_directions = numpy.zeros(
+        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    )
+    ray_colours = numpy.zeros(
+        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    )
+
+    for y_coord in IMG_HEIGHT:
+        for x_coord in IMG_WIDTH:
+            for sample in range(PIXEL_SAMPLES):
+                x_progress = (x_coord + random()) / IMG_WIDTH
+                y_progress = (y_coord + random()) / IMG_HEIGHT
+                ray = camera.get_ray(x_progress, y_progress)
+                ray_origins[x_coord, y_coord, sample] = ray.origin
+                ray_directions[x_coord, y_coord, sample] = ray.direction
+
+    ray_origins = ray_origins.reshape(-1, 3)
+    ray_directions = ray_directions.reshape(-1, 3)
+
+    sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
+        ray_origins, ray_directions
+    )
+    ray_hits = sphere_hit_indecies > -1
+    ray_colours[ray_hits] = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
+    
+
+
+
 def gen_row_of_spheres_world():
     grey_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
 
