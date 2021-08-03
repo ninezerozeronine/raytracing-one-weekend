@@ -106,6 +106,84 @@ class Camera():
 
         return Ray((self.camera_pos + offset_vec), ray_direction)
 
+    def get_ray_components(self, width, height, samples):
+        """
+
+        """
+
+        # Turn width, height and samples into a list of 0-1 positions
+        # on the focal plane.
+        #
+        # Create an array w x h x samples
+        # Set w and h to be the index on that axis
+        # Add a [0-1) value to x and y for the sample offset
+        # Divide X values by width and Y values be height
+
+        pixel_positions = numpy.zeros(
+            (width, height, samples, 3), dtype=numpy.single
+        )
+        for x_coord in range(width):
+            pixel_positions[x_coord,...,0] = x_coord
+
+        for y_coord in range(height):
+            pixel_positions[:,y_coord,...,1] = y_coord
+
+        sample_offsets = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+        pixel_positions += sample_offsets
+
+        pixel_positions[...,0] /= width
+        pixel_positions[...,1] /= height
+        viewport_percentages = pixel_positions
+
+        # Create an array of offests in an xy disk for every sample.
+        xy_disk_coords = RNG.uniform(low=-1.0, high=1.0, size=(width, height, samples, 3))
+        flattened = xy_disk_coords.reshape(-1, 3)
+        flattened[..., 2] = 0
+        while True:
+            dots = numpy.einsum("ij,ij->i", flattened, flattened)
+            if not numpy.any(dots > 1.0):
+                break
+            new_coords = RNG.uniform(low=-1.0, high=1.0, size=(width, height, samples, 3))
+            new_flattened = new_coords.reshape(-1, 3)
+            new_flattened[..., 2] = 0
+            flattened[dots > 1.0] = new_flattened[dots > 1.0]
+        xy_disk_coords = flattened.reshape(width, height, samples, 3)
+
+        # Scale the disk offest vecs by lens radius
+        offset_vecs = self.lens_radius * xy_disk_coords
+
+        # Orient the offsets to the wat the camera is facing
+        offset_vecs_oriented = (
+            offset_vecs[..., 0, numpy.newaxis] * self.U
+            + offset_vecs[..., 1, numpy.newaxis] * self.V
+        )
+
+        # Turn the viewport percentages into positions in space on the viewport
+        pts_on_viewport = (
+            self.bottomleft_focalplane_pos
+            + self.viewport_horizontal * viewport_percentages[..., 0, numpy.newaxis]
+            + self.viewport_vertical * viewport_percentages[..., 1, numpy.newaxis]
+        )
+
+        ray_origins = offset_vecs_oriented + self.camera_pos
+        ray_dirs = pts_on_viewport - ray_origins
+        ray_dirs /= numpy.sqrt((ray_dirs ** 2).sum(axis=-1))[..., numpy.newaxis]
+
+
+        # pts_on_viewport = (
+        #     self.bottomleft_focalplane_pos
+        #     + self.viewport_horizontal * viewport_percentages[..., 0, numpy.newaxis]
+        #     + self.viewport_vertical * viewport_percentages[..., 1, numpy.newaxis]
+        # )
+
+        # ray_origins = numpy.zeros(
+        #     (width, height, samples, 3), dtype=numpy.single
+        # )
+        # ray_origins[..., :] = self.camera_pos
+        # ray_dirs = pts_on_viewport - self.camera_pos
+        # ray_dirs /= numpy.sqrt((ray_dirs ** 2).sum(axis=-1))[..., numpy.newaxis]
+
+        return ray_origins, ray_dirs
 
 def point_in_unit_xy_disk():
     """

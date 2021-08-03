@@ -4,7 +4,7 @@ A group of spheres that can collide with a group of rays.
 
 import numpy
 
-class SphereRayGroup():
+class SphereGroupRayGroup():
     """
     Note that we don't use a base class because that slows things down.
     """
@@ -69,6 +69,8 @@ class SphereRayGroup():
         # To avoid nans from negative discriminants, use the max value
         # between the orig disc, and a small +ve num.
         discriminants = numpy.square(Hs) - Cs
+        # This saves some memory
+        del Cs
         sqrt_discriminants = numpy.sqrt(numpy.maximum(0.00001, discriminants))
 
         # Also a grid of scalars num_rays by num_spheres in size.
@@ -82,9 +84,12 @@ class SphereRayGroup():
             smaller_ts,
             larger_ts
         )
+        # This saves some memory
+        del smaller_ts
+        del larger_ts
         # Here we filter out any discriminants that were less than 0
         t_filter = (discriminants > 0.00001) & (all_ts > t_min) & (all_ts < t_max)
-        final_ts = numpy.where(t_filter, ts, t_max +1)
+        final_ts = numpy.where(t_filter, all_ts, t_max +1)
 
         # A 1D array num_rays long that contains the index of the
         # sphere with the smallest t

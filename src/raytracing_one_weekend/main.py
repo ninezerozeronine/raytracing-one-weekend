@@ -15,6 +15,7 @@ from .ray import Ray
 from .renderable import World
 from .sphere import Sphere
 from .sphere_group import SphereGroup
+from .sphere_group_ray_group import SphereGroupRayGroup
 from .mttriangle import MTTriangle
 from .mttriangle_group import MTTriangleGroup
 from .obj_tri_mesh import OBJTriMesh
@@ -25,7 +26,7 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 50
+PIXEL_SAMPLES = 20
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
 RNG = numpy.random.default_rng()
@@ -153,37 +154,171 @@ def render():
 
 def numpy_render():
 
-    world, camera = bunnies_scene()
+    # Cam setup
+    cam_pos = numpy.array([5.0, 2.0, 10.0])
+    cam_lookat = numpy.array([0.0, 1.0, 0.0])
+    pos_to_lookat = cam_lookat - cam_pos
+    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    aperture = 0.5
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
 
-    ray_origins = numpy.zeros(
-        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Red
+    sphere_ray_group.add_sphere(
+        numpy.array([-5, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([1,0,0], dtype=numpy.single),
     )
-    ray_directions = numpy.zeros(
-        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+
+    # Green
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([0,1,0], dtype=numpy.single),
     )
+
+    # Blue
+    sphere_ray_group.add_sphere(
+        numpy.array([5, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([0,0,1], dtype=numpy.single),
+    )
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0, -1000, 0],  dtype=numpy.single),
+        1000.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+
+    # Bunch of small spheres
+    for x in range(-10, 10):
+        for z in range(-10, 10):
+            sphere_ray_group.add_sphere(
+                numpy.array([x, 0.3, z], dtype=numpy.single),
+                0.3,
+                RNG.uniform(low=0.0, high=1.0, size=3)
+            )
+
+
+
+
+
+
+
+
+
+
+
+    # cam_pos = numpy.array([3.0, 3.0, 2.0])
+    # cam_lookat = numpy.array([0.0, 0.0, -1.0])
+    # pos_to_lookat = cam_lookat - cam_pos
+    # focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    # aperture = 2.0
+    # camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 45.0)
+
+
+    # # # Sphere setup
+    # sphere_ray_group = SphereGroupRayGroup()
+
+    # # Red
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([-1, 0, -1], dtype=numpy.single),
+    #     0.5,
+    #     numpy.array([1,0,0], dtype=numpy.single),
+    # )
+
+    # # Blue
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([0, 0, -1], dtype=numpy.single),
+    #     0.5,
+    #     numpy.array([0,0,1], dtype=numpy.single),
+    # )
+
+    # # Yellowish
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([1, 0, -1], dtype=numpy.single),
+    #     0.5,
+    #     numpy.array([0.8,0.6,0.2], dtype=numpy.single),
+    # )
+
+    # # Ground
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([0, -1000.5, 0],  dtype=numpy.single),
+    #     1000.0,
+    #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    # )
+
+
+    print("Generating arrays")
+    # ray_origins = numpy.zeros(
+    #     (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    # )
+    # ray_directions = numpy.zeros(
+    #     (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
+    # )
     ray_colours = numpy.zeros(
         (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
     )
 
-    for y_coord in IMG_HEIGHT:
-        for x_coord in IMG_WIDTH:
-            for sample in range(PIXEL_SAMPLES):
-                x_progress = (x_coord + random()) / IMG_WIDTH
-                y_progress = (y_coord + random()) / IMG_HEIGHT
-                ray = camera.get_ray(x_progress, y_progress)
-                ray_origins[x_coord, y_coord, sample] = ray.origin
-                ray_directions[x_coord, y_coord, sample] = ray.direction
+    print("Filling ray arrays")
+    # for y_coord in range(IMG_HEIGHT):
+    #     print(f"{y_coord} of {IMG_HEIGHT - 1}")
+    #     for x_coord in range(IMG_WIDTH):
+    #         for sample in range(PIXEL_SAMPLES):
+    #             x_progress = (x_coord + random()) / IMG_WIDTH
+    #             y_progress = (y_coord + random()) / IMG_HEIGHT
+    #             ray = camera.get_ray(x_progress, y_progress)
+    #             ray_origins[x_coord, y_coord, sample] = ray.origin
+    #             ray_directions[x_coord, y_coord, sample] = ray.direction
+
+    ray_origins, ray_directions = camera.get_ray_components(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES)
 
     ray_origins = ray_origins.reshape(-1, 3)
     ray_directions = ray_directions.reshape(-1, 3)
+    ray_colours = ray_colours.reshape(-1, 3)
 
+    print("Getting ray hits")
+    # sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
+    #     ray_origins, ray_directions, 0.00001, 5000.0
+    # )
+
+    # Need to chunk otherwise it runs out of memory :(
+    num_chunks = 20
+    ray_origins_chunks = numpy.split(ray_origins, num_chunks)
+    ray_directions_chunks = numpy.split(ray_directions, num_chunks)
+    print(f"Chunk 1 of {num_chunks}")
     sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
-        ray_origins, ray_directions
+        ray_origins_chunks[0], ray_directions_chunks[0], 0.00001, 5000.0
     )
-    ray_hits = sphere_hit_indecies > -1
-    ray_colours[ray_hits] = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
-    
+    for chunk_index in range(1,num_chunks):
+        print(f"Chunk {chunk_index+1} of {num_chunks}")
+        sphere_hit_indecies_chunk, sphere_hit_ts_chunk = sphere_ray_group.get_hits(
+            ray_origins_chunks[chunk_index], ray_directions_chunks[chunk_index], 0.00001, 5000.0
+        )
+        sphere_hit_indecies = numpy.concatenate((sphere_hit_indecies, sphere_hit_indecies_chunk), axis=0)
+        sphere_hit_ts = numpy.concatenate((sphere_hit_ts, sphere_hit_ts_chunk), axis=0)
 
+
+    ray_hits = sphere_hit_indecies > -1
+    ray_misses = sphere_hit_indecies < 0
+    ray_colours[ray_hits] = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
+    ray_colours[ray_misses] = numpy.array([0,0,0], dtype=numpy.single)
+
+    ray_colours_stacked = ray_colours.reshape(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3)
+    ray_cols_sample_avg = numpy.mean(ray_colours_stacked, axis=2)
+    
+    print("Filling pixel data")
+    pixel_data = {}
+    for y_coord in range(IMG_HEIGHT):
+        for x_coord in range(IMG_WIDTH):
+            pixel_data[(x_coord, y_coord)] = ray_cols_sample_avg[x_coord, y_coord]
+
+    return pixel_data
 
 
 def gen_row_of_spheres_world():
@@ -750,7 +885,6 @@ def checkerboard_scene():
     return world, camera
 
 
-
 def get_ray_colour(ray, world, depth):
     """
     Given a ray, get the colour from the scene
@@ -785,7 +919,7 @@ def get_ray_colour(ray, world, depth):
 
 def main():
     print("Start render")
-    img_data = render()
+    img_data = numpy_render()
     print("End render")
     generate_image_from_data(img_data)
 

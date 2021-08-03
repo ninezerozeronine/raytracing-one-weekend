@@ -750,30 +750,159 @@ def sphere_colour_test():
 
 
 def ray_array_test():
-    width = 5
-    height = 3
-    samples = 2
+    # width = 5
+    # height = 3
+    # samples = 2
 
-    ray_array = numpy.zeros((width, height, samples, 3), dtype=numpy.single)
-    count = 0
-    for y in range(height):
-        for x in range(width):
-            for s in range(samples):
-                ray_array[x, y, s] = [count, count, count]
-                count += 1
+    # ray_array = numpy.zeros((width, height, samples, 3), dtype=numpy.single)
+    # count = 0
+    # for y in range(height):
+    #     for x in range(width):
+    #         for s in range(samples):
+    #             ray_array[x, y, s] = [count, count, count]
+    #             count += 1
 
-    print(count - 1)
-    print(ray_array[4,2,1])
-    print(ray_array[1,1,0])
-    flattened = ray_array.reshape(-1, 3)
-    print(flattened.shape)
-    stacked = flattened.reshape(5,3,2,3)
-    print(stacked.shape)
-    print(stacked[4,2,1])
-    print(stacked[1,1,0])
+    # print(count - 1)
+    # print(ray_array[4,2,1])
+    # print(ray_array[1,1,0])
+    # flattened = ray_array.reshape(-1, 3)
+    # print(flattened.shape)
+    # stacked = flattened.reshape(width, height, samples,3)
+    # print(stacked.shape)
+    # print(stacked[4,2,1])
+    # print(stacked[1,1,0])
+
+    # ray_sums = numpy.mean(ray_array, axis=2)
+    # print(ray_sums.shape)
+    # test_x = 1
+    # test_y = 2
+    # print(ray_array[test_x, test_y, 0], ray_array[test_x, test_y, 1])
+    # print(ray_sums[test_x, test_y, 0])
+
+    # ray_array[0,...,0] = 0
+    # ray_array[1,...,0] = 1
+    # ray_array[2,...,0] = 2
+    # print(ray_array[1,0,0])
+    # print(ray_array[1,1,0])
+    # print(ray_array[1,1,1])
+    # print(ray_array[2,1,1])
+
+    # ray_array[:,0,...,1] = 0
+    # ray_array[:,1,...,1] = 1
+    # ray_array[:,2,...,1] = 2
+    # print(ray_array[1,0,0])
+    # print(ray_array[2,1,0])
+    # print(ray_array[3,2,1])
 
 
 
+
+
+
+    lens_radius = 0.1
+    U = numpy.array([0.5, 0.0, 0.0])
+    V = numpy.array([0.0, 0.5, 0.0])
+    viewport_horizontal = numpy.array([1.0,0.0,0.0])
+    viewport_vertical = numpy.array([0.0,1.0,0.0])
+    bottomleft_focalplane_pos = numpy.array([0.0,0.0,0.0])
+    camera_pos = numpy.array([5.0, 5.0, 5.0])
+
+    width = 90
+    height = 60
+    samples = 50
+
+
+    pixel_positions = numpy.zeros(
+        (width, height, samples, 3), dtype=numpy.single
+    )
+    for x_coord in range(width):
+        pixel_positions[x_coord,...,0] = x_coord
+
+    for y_coord in range(height):
+        pixel_positions[:,y_coord,...,1] = y_coord
+
+    print(pixel_positions[70, 55, 45])
+
+    sample_offsets = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+    pixel_positions += sample_offsets
+    print(pixel_positions[70, 55, 45])
+
+    pixel_positions[...,0] /= width
+    pixel_positions[...,1] /= height
+    viewport_percentages = pixel_positions
+
+    print(viewport_percentages[0, 0, 0])
+    print(viewport_percentages[45, 30, 0])
+    print(viewport_percentages[89, 59, 0])
+
+    # Create an array of offests in an xy disk for every sample.
+    xy_disk_coords = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+    flattened = xy_disk_coords.reshape(-1, 3)
+    flattened[..., 2] = 0
+    while True:
+        dots = numpy.einsum("ij,ij->i", flattened, flattened)
+        if not numpy.any(dots > 1.0):
+            break
+        new_coords = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+        new_flattened = new_coords.reshape(-1, 3)
+        new_flattened[..., 2] = 0
+        flattened[dots > 1.0] = new_flattened[dots > 1.0]
+    xy_disk_coords = flattened.reshape(width, height, samples, 3)
+
+    print("---")
+
+    print(xy_disk_coords[0,0,0])
+    print(xy_disk_coords[2,2,1])
+
+    offset_amounts = lens_radius * xy_disk_coords
+
+    print(offset_amounts[0,0,0])
+    print(offset_amounts[2,2,1])
+
+    # print(offset_amounts.shape)
+    # print(U.shape)
+    offset_vecs = (
+        offset_amounts[..., 0, numpy.newaxis] * U
+        + offset_amounts[..., 1, numpy.newaxis] * V
+    )
+
+    print(offset_vecs.shape)
+    print(offset_vecs[0,0,0])
+    print(offset_vecs[2,2,1])
+
+
+
+    # Turn the viewport percentages into positions in space on the viewport
+    pts_on_viewport = (
+        bottomleft_focalplane_pos
+        + viewport_horizontal * viewport_percentages[..., 0, numpy.newaxis]
+        + viewport_vertical * viewport_percentages[..., 1, numpy.newaxis]
+    )
+
+    print(pts_on_viewport.shape)
+
+    # viewport_percentages[..., :] *= viewport_horizontal
+    # viewport_percentages[..., :] *= viewport_vertical
+    # pts_on_viewport = viewport_percentages + bottomleft_focalplane_pos
+
+    ray_origins = offset_vecs + camera_pos
+    ray_dirs = pts_on_viewport - ray_origins
+
+    return ray_origins, ray_dirs
+
+
+
+
+    print(pixel_positions[0, 0, 0])
+    print(pixel_positions[45, 30, 0])
+    print(pixel_positions[89, 59, 0])
+
+
+
+
+    # x_coords = numpy.arange(width)
+    # y_coords = numpy.arange(height)
+    # sample_indecies = numpy.arange(samples)
 
 
 
@@ -993,12 +1122,89 @@ def vec_subset_test():
     print(new_data)
 
 
+def array_split_assign_test():
+    pass
+    # res = numpy.arange(50)
+    # nums = numpy.arange(50)
+    # res[0:10] = nums[0:10]
+    # res[10:20] = nums[10:20] * 10
+    # parts = numpy.array_split(nums, 3)
+    # for part in parts:
+    #     print(part)
+    # numpy.
+    # rejoined = numpy.concatenate(parts)
+    # print(rejoined)
 
-# main.main()
+
+def disk_coords_test():
+    width = 900
+    height = 600
+    samples = 50
+
+    xy_disk_coords = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+    flattened = xy_disk_coords.reshape(-1, 3)
+    flattened[..., 2] = 0
+    while True:
+        print("Loop")
+        dots = numpy.einsum("ij,ij->i", flattened, flattened)
+        if not numpy.any(dots > 1.0):
+            break
+        new_coords = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
+        new_flattened = new_coords.reshape(-1, 3)
+        new_flattened[..., 2] = 0
+        flattened[dots > 1.0] = new_flattened[dots > 1.0]
+
+    print(flattened[0])
+    print(numpy.einsum("ij,ij->i", flattened, flattened)[0])
+
+
+def get_array_slice_start_end(length, num_slices, slice_index):
+    """
+
+    """
+
+    if not (length > 0):
+        raise Exception("Invalid length, must be > 0")
+
+    if not (1 <= num_slices <= length):
+        raise Exception("Invalid number of slices, must be >= 1 and <= length")
+
+    if not (0 <= slice_index < length):
+        raise Exception("Invalid slice index, must be >= 0 and < length")
+
+    slice_size = length // num_slices
+    # if (length % slice_size) != 0:
+    #     if (length - (slice_size * (num_slices - 1))) >= num_slices:
+    #         slice_size += 1
+    slice_start = slice_size * slice_index
+    if slice_index == (num_slices - 1):
+        slice_end = length
+    else:
+        slice_end = (slice_index + 1) * slice_size
+
+    return slice_start, slice_end
+
+def test_array_slice(length, num_slices):
+    nums = list(range(1,length+1))
+    for slice_index in range(num_slices):
+        slice_start, slice_end = get_array_slice_start_end(length, num_slices, slice_index)
+        print(nums[slice_start:slice_end], end=" ")
+
+
+# for i in range(4,20):
+#     test_array_slice(i,4)
+#     print("")
+
+
+
+main.main()
+# test_array_slice(8,3)
+# array_split_assign_test()
 # numpy_axis_combo_tests()
-ray_parallelisation_test()
+# ray_parallelisation_test()
 # sphere_colour_test()
 # ray_array_test()
+# disk_coords_test()
 # vec_subset_test()
 # mask_speed_test()
 # test_obj_read()
