@@ -166,6 +166,47 @@ class PointOnHemiSphereMaterial():
         )
 
 
+def numpy_point_on_hemisphere_material(hit_points, hit_normals):
+
+    # Generate points in unit hemispheres pointing in the normal direction
+
+    # Start by generating points in the cube that bounds the sphere
+    pts_in_hemisph = RNG.uniform(low=-1.0, high=1.0, size=(hit_points.shape[0], 3))
+
+    # Would be good to optimise this so that we only check the newly
+    # regenerated points
+    while True:
+        lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
+
+        invalid_pts = lengths_squared > 1.0
+        num_bad_pts = numpy.count_nonzero(invalid_pts)
+        if num_bad_pts == 0:
+            break
+        new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+        pts_in_hemisph[invalid_pts] = new_pts
+
+    # Reverse any points in the wrong hemisphere
+    cosine_angles = numpy.einsum("ij,ij->i", pts_in_hemisph, hit_normals)
+    facing_wrong_way = cosine_angles < 0.0
+    pts_in_hemisph[facing_wrong_way] *= -1.0
+
+
+    # Make sure none of the points are very close to 0,0,0. If they
+    # are, replace with normal
+    lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
+    too_short = lengths_squared < 0.00001
+    pts_in_hemisph[too_short] = hit_normals[too_short]
+
+    ray_origins = hit_points
+    ray_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", ray_dirs, ray_dirs))[..., numpy.newaxis]
+
+    colours = 
+
+    return colours, ray_origins, ray_dirs
+
+
+
+
 class PointInUnitSphereMaterial():
     """
     Scatter rays towards points in a unit sphere which it's base at the

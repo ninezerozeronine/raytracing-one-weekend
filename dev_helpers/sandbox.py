@@ -1158,6 +1158,57 @@ def disk_coords_test():
     print(numpy.einsum("ij,ij->i", flattened, flattened)[0])
 
 
+def masked_assign_test():
+    """
+    Remap a continuous array to specific indecies of an array 
+    """
+    nums = numpy.arange(10)
+    nums[nums % 2 == 0] = numpy.array([-1,-2,-3,-4,-5])
+    print(nums)
+
+
+def test_material():
+    hit_points = numpy.zeros((50,3))
+    hit_normals = numpy.zeros((50,3))
+    hit_normals[:,1] = 1.0
+    print(hit_normals)
+
+    pts_in_hemisph = RNG.uniform(low=-1.0, high=1.0, size=(hit_points.shape[0], 3))
+
+    # Would be good to optimise this so that we only check the newly
+    # regenerated points
+    while True:
+        lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
+
+        invalid_pts = lengths_squared > 1.0
+        num_bad_pts = numpy.count_nonzero(invalid_pts)
+        if num_bad_pts == 0:
+            break
+        new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+        pts_in_hemisph[invalid_pts] = new_pts
+
+    # Reverse any points in the wrong hemisphere
+    cosine_angles = numpy.einsum("ij,ij->i", pts_in_hemisph, hit_normals)
+    facing_wrong_way = cosine_angles < 0.0
+    pts_in_hemisph[facing_wrong_way] *= -1.0
+
+
+    # Make sure none of the points are very close to 0,0,0. If they
+    # are, replace with normal
+    lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
+    too_short = lengths_squared < 0.00001
+    pts_in_hemisph[too_short] = hit_normals[too_short]
+
+    print(pts_in_hemisph)
+
+    ray_dirs = numpy.zeros((3,3))
+    ray_dirs[0,1] = 1
+    ray_dirs[1,1] = -5
+    ray_dirs[2,1] = 10
+    ray_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", ray_dirs, ray_dirs))[..., numpy.newaxis]
+    print(ray_dirs)
+
+
 def get_array_slice_start_end(length, num_slices, slice_index):
     """
 
@@ -1184,6 +1235,7 @@ def get_array_slice_start_end(length, num_slices, slice_index):
 
     return slice_start, slice_end
 
+
 def test_array_slice(length, num_slices):
     nums = list(range(1,length+1))
     for slice_index in range(num_slices):
@@ -1197,7 +1249,9 @@ def test_array_slice(length, num_slices):
 
 
 
-main.main()
+# main.main()
+# masked_assign_test()
+test_material()
 # test_array_slice(8,3)
 # array_split_assign_test()
 # numpy_axis_combo_tests()

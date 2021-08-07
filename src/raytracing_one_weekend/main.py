@@ -282,6 +282,47 @@ def numpy_render():
     ray_directions = ray_directions.reshape(-1, 3)
     ray_colours = ray_colours.reshape(-1, 3)
 
+    # For the 0th bounce, every ray is considered to have hit.
+    active_ray_indecies = numpy.arange(ray_origins.shape[0])
+
+    while bounce <= max_bounces:
+
+        sphere_hit_indecies, sphere_hit_ts, sphere_hit_pts, sphere_hit_normals = sphere_ray_group.get_hits(
+            ray_origins[active_ray_indecies],
+            ray_directions[active_ray_indecies],
+            0.00001,
+            5000.0
+        )
+
+        ray_hits = sphere_hit_indecies > -1
+        ray_misses = sphere_hit_indecies < 0
+
+        hit_colours, scatter_ray_origins, scatter_ray_dirs = numpy_point_on_hemisphere_material(
+            sphere_hit_pts,
+            sphere_hit_normals,
+            sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
+        )
+
+        ray_origins[active_ray_indecies[ray_hits]] = scatter_ray_origins
+        ray_directions[active_ray_indecies[ray_hits]] = scatter_ray_dirs
+        ray_colours[active_ray_indecies[ray_hits], bounce] = hit_colours
+        ray_colours[active_ray_indecies[ray_misses], bounce] = numpy.array([1, 1, 1]. dtype=numpy.single)
+
+        active_ray_indecies = active_ray_indecies[ray_hits]
+
+
+        bounce += 1
+
+
+
+
+
+
+
+
+
+
+
     print("Getting ray hits")
     # sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
     #     ray_origins, ray_directions, 0.00001, 5000.0
