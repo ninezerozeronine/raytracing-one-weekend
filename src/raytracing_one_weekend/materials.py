@@ -152,7 +152,7 @@ class PointOnHemiSphereMaterial():
         scatter_direction = random_vec_in_unit_hemisphere(hit_record.normal)
         # Catch if our randomly generated direction vector is very close to
         # zero
-        if scatter_direction.dot(scatter_direction) < 0.000001:
+        if scatter_direction.dot(scatter_direction) < 0.00001:
             scatter_direction = hit_record.normal
         scattered_ray = Ray(
             hit_record.hit_point,
@@ -172,6 +172,7 @@ def numpy_point_on_hemisphere_material(hit_points, hit_normals):
 
     # Start by generating points in the cube that bounds the sphere
     pts_in_hemisph = RNG.uniform(low=-1.0, high=1.0, size=(hit_points.shape[0], 3))
+    pts_in_hemisph = pts_in_hemisph.astype(numpy.single)
 
     # Would be good to optimise this so that we only check the newly
     # regenerated points
@@ -183,6 +184,7 @@ def numpy_point_on_hemisphere_material(hit_points, hit_normals):
         if num_bad_pts == 0:
             break
         new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+        new_pts = new_pts.astype(numpy.single)
         pts_in_hemisph[invalid_pts] = new_pts
 
     # Reverse any points in the wrong hemisphere
@@ -194,17 +196,16 @@ def numpy_point_on_hemisphere_material(hit_points, hit_normals):
     # Make sure none of the points are very close to 0,0,0. If they
     # are, replace with normal
     lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
-    too_short = lengths_squared < 0.00001
+    too_short = lengths_squared < 0.000001
     pts_in_hemisph[too_short] = hit_normals[too_short]
 
-    ray_origins = hit_points
-    ray_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", ray_dirs, ray_dirs))[..., numpy.newaxis]
+    # Normalise the normals
+    pts_in_hemisph /= numpy.sqrt(numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph))[..., numpy.newaxis]
 
-    colours = 
+    # Bounce ray origins are the hit points we fed in
+    # Bounce ray directions are the random points in the hemisphere.
 
-    return colours, ray_origins, ray_dirs
-
-
+    return hit_points, pts_in_hemisph
 
 
 class PointInUnitSphereMaterial():
@@ -696,7 +697,7 @@ def random_vec_in_unit_sphere():
         # If the length of the vector squared (thanks dot product of
         # a vector with itself!) is greater than 1 then we're not in
         # a unit sphere.
-        if random_vec.dot(random_vec) > 1:
+        if random_vec.dot(random_vec) > 1.0:
             continue
         else:
             return random_vec

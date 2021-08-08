@@ -928,7 +928,7 @@ def ray_parallelisation_test():
             [4.5, 0.0, -2.0],
             [3.5, 0.0, -2.0],
             [2.0, 0.0, -2.0],
-            [5.0, 0.0, 5.0],
+            [10.0, 0.0, 5.0],
             [0.0, 0.0, 0.0],
             [11, 0, 5],
             [5, 0, 10],
@@ -1014,8 +1014,8 @@ def ray_parallelisation_test():
     )
     t_filter = (discriminants > 0.00001) & (ts > 0.00001)
     final_ts = numpy.where(t_filter, ts, 101)
+    print("final ts")
     print(final_ts)
-    print("-")
 
     # nearset_hits = reduce(numpy.minimum, final_ts.T)
     # print(nearset_hits)
@@ -1024,10 +1024,12 @@ def ray_parallelisation_test():
     # A 1D array num_rays long that contains the index of the
     # sphere with the smallest t
     smallest_t_indecies = numpy.argmin(final_ts, axis=1)
+    print("smallest_t_indecies")
     print(smallest_t_indecies)
 
     # A 1D array num_rays long containing the t values for each ray
     smallest_ts = final_ts[numpy.arange(ray_origins.shape[0]), smallest_t_indecies]
+    print("smallest_ts")
     print(smallest_ts)
 
     # A 1D array num_rays long that contains the index of the
@@ -1037,9 +1039,30 @@ def ray_parallelisation_test():
         smallest_t_indecies,
         -1
     )
+    print("sphere_hit_indecies")
     print(sphere_hit_indecies)
 
+    ray_hits = smallest_ts < 100
+    print("ray hits")
+    print(ray_hits)
 
+    hit_points = ray_origins[ray_hits] + ray_dirs[ray_hits] * smallest_ts[ray_hits][..., numpy.newaxis]
+    print("hit_points")
+    print(hit_points)
+
+    # Dividing by the radius is a quick way to normalise!
+    centres_to_hit_pts = hit_points - sphere_centres[sphere_hit_indecies[ray_hits]]
+    print("centres_to_hit_pts")
+    print(centres_to_hit_pts)
+
+    print(sphere_radii[sphere_hit_indecies[ray_hits]])
+    hit_normals = centres_to_hit_pts / (sphere_radii[sphere_hit_indecies[ray_hits]])[..., numpy.newaxis]
+    print("hit_normals")
+    print(hit_normals)
+
+    print("hit_normals2")
+    hit_normals2 = (hit_points - sphere_centres[sphere_hit_indecies[ray_hits]]) / sphere_radii[sphere_hit_indecies[ray_hits]][..., numpy.newaxis]
+    print(hit_normals2)
 
 
     # smallest_t_indecies = numpy.argmin(final_ts, axis=1)
@@ -1209,6 +1232,81 @@ def test_material():
     print(ray_dirs)
 
 
+def test_sky_col():
+    ray_directions = numpy.array(
+        [
+            [0,1,0],
+            [0,0.5,0],
+            [0,0.25,0],
+            [0,0.1,0],
+        ],
+        dtype=numpy.single
+    )
+
+    ray_misses = numpy.array([True, False, True, False], dtype=bool)
+    ray_colours = numpy.ones((4,3))
+    HORIZON_COLOUR = numpy.array([0.0,0.0,0.0])
+    SKY_COLOUR = numpy.array([1.0,0.0,0.0])
+
+    ts = (ray_directions[ray_misses, 1] + 1.0) * 0.5
+    print(ts)
+    ray_colours[ray_misses] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
+    print(ray_colours)
+
+
+def numpy_bounce_prod_test():
+
+    # ray, bounce, <vec>
+    ray_cols = numpy.ones((4,4,3))
+    #ray_cols[0,0] = numpy.array([1,2,3])
+    ray_cols[0,1] = numpy.array([1,2,3])
+    ray_cols[0,2] = numpy.array([1,2,3])
+
+    ray_cols[1,0] = numpy.array([4,5,6])
+    #ray_cols[1,1] = numpy.array([4,5,6])
+    ray_cols[1,2] = numpy.array([4,5,6])
+
+    ray_cols[2,0] = numpy.array([7,8,9])
+    ray_cols[2,1] = numpy.array([7,8,9])
+    #ray_cols[2,2] = numpy.array([4,5,6])
+
+    ray_cols[3,0] = numpy.array([0,1,0])
+    ray_cols[3,1] = numpy.array([0,2,0])
+    ray_cols[3,2] = numpy.array([0,3,0])
+
+    print(ray_cols)
+    print(ray_cols.shape)
+    multiplied = numpy.prod(ray_cols, axis=1)
+    print(multiplied)
+    print(multiplied.shape)
+
+    # active_ray_indecies = numpy.array([0,1,2,3])
+    # ray_hits = numpy.array([True, False, True, True])
+    # new_cols = numpy.array(
+    #     [
+    #         [5,5,5],
+    #         [7,7,7],
+    #         [8,8,8]
+    #     ]
+    # )
+    # ray_cols[active_ray_indecies[ray_hits], 0] = new_cols
+    # print("After bounce 0")
+    # print(ray_cols)
+
+
+    # active_ray_indecies = numpy.array([1,3])
+    # ray_hits = numpy.array([False, True])
+    # new_cols = numpy.array(
+    #     [
+    #         [3,3,3]
+    #     ]
+    # )
+
+    # ray_cols[active_ray_indecies[ray_hits], 1] = new_cols
+    # print("After bounce 1")
+    # print(ray_cols)
+
+
 def get_array_slice_start_end(length, num_slices, slice_index):
     """
 
@@ -1249,9 +1347,11 @@ def test_array_slice(length, num_slices):
 
 
 
-# main.main()
+main.main()
+# numpy_bounce_prod_test()
+# test_sky_col()
 # masked_assign_test()
-test_material()
+# test_material()
 # test_array_slice(8,3)
 # array_split_assign_test()
 # numpy_axis_combo_tests()

@@ -80,6 +80,7 @@ class SphereGroup():
         hit_point = ray.at(t)
         # Dividing by the radius is a quick way to normalise!
         normal = (hit_point - self.centres[index]) / self.radii[index]
+        hit_point += normal * 0.0001
         side = renderable.Side.FRONT
         # In the typical case the ray is outside the sphere, and
         # the normal is facing "toward" the ray. This means the

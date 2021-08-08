@@ -26,11 +26,12 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 20
-HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0])
-SKY_COLOUR = numpy.array([0.5, 0.7, 1.0])
+PIXEL_SAMPLES = 50
+MAX_BOUNCES = 4
+HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
+SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
-MAX_DEPTH = 10
+MAX_DEPTH = 4
 
 
 def generate_test_image():
@@ -88,7 +89,7 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = bunnies_scene()
+    world, camera = numpy_comparison_scene()
 
     img_data = {}
     pixel_coords = (
@@ -206,14 +207,6 @@ def numpy_render():
 
 
 
-
-
-
-
-
-
-
-
     # cam_pos = numpy.array([3.0, 3.0, 2.0])
     # cam_lookat = numpy.array([0.0, 0.0, -1.0])
     # pos_to_lookat = cam_lookat - cam_pos
@@ -282,46 +275,6 @@ def numpy_render():
     ray_directions = ray_directions.reshape(-1, 3)
     ray_colours = ray_colours.reshape(-1, 3)
 
-    # For the 0th bounce, every ray is considered to have hit.
-    active_ray_indecies = numpy.arange(ray_origins.shape[0])
-
-    while bounce <= max_bounces:
-
-        sphere_hit_indecies, sphere_hit_ts, sphere_hit_pts, sphere_hit_normals = sphere_ray_group.get_hits(
-            ray_origins[active_ray_indecies],
-            ray_directions[active_ray_indecies],
-            0.00001,
-            5000.0
-        )
-
-        ray_hits = sphere_hit_indecies > -1
-        ray_misses = sphere_hit_indecies < 0
-
-        hit_colours, scatter_ray_origins, scatter_ray_dirs = numpy_point_on_hemisphere_material(
-            sphere_hit_pts,
-            sphere_hit_normals,
-            sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
-        )
-
-        ray_origins[active_ray_indecies[ray_hits]] = scatter_ray_origins
-        ray_directions[active_ray_indecies[ray_hits]] = scatter_ray_dirs
-        ray_colours[active_ray_indecies[ray_hits], bounce] = hit_colours
-        ray_colours[active_ray_indecies[ray_misses], bounce] = numpy.array([1, 1, 1]. dtype=numpy.single)
-
-        active_ray_indecies = active_ray_indecies[ray_hits]
-
-
-        bounce += 1
-
-
-
-
-
-
-
-
-
-
 
     print("Getting ray hits")
     # sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
@@ -348,7 +301,10 @@ def numpy_render():
     ray_hits = sphere_hit_indecies > -1
     ray_misses = sphere_hit_indecies < 0
     ray_colours[ray_hits] = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
-    ray_colours[ray_misses] = numpy.array([0,0,0], dtype=numpy.single)
+
+    # Lerp between white and blue based on mapped Y
+    ts = (ray_directions[ray_misses, 1] + 1.0) * 0.5
+    ray_colours[ray_misses] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
 
     ray_colours_stacked = ray_colours.reshape(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3)
     ray_cols_sample_avg = numpy.mean(ray_colours_stacked, axis=2)
@@ -358,6 +314,127 @@ def numpy_render():
     for y_coord in range(IMG_HEIGHT):
         for x_coord in range(IMG_WIDTH):
             pixel_data[(x_coord, y_coord)] = ray_cols_sample_avg[x_coord, y_coord]
+
+    return pixel_data
+
+
+def numpy_bounce_render():
+    # Cam setup
+    cam_pos = numpy.array([5.0, 2.0, 10.0])
+    cam_lookat = numpy.array([0.0, 1.0, 0.0])
+    pos_to_lookat = cam_lookat - cam_pos
+    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    aperture = 0.5
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Red
+    sphere_ray_group.add_sphere(
+        numpy.array([-5, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+    )
+
+    # Green
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([0,1,0], dtype=numpy.single),
+    )
+
+    # Blue
+    sphere_ray_group.add_sphere(
+        numpy.array([5, 2, 0], dtype=numpy.single),
+        2.0,
+        numpy.array([0,0,1], dtype=numpy.single),
+    )
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0, -1000, 0],  dtype=numpy.single),
+        1000.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+
+    # # Bunch of small spheres
+    # for x in range(-10, 10):
+    #     for z in range(-10, 10):
+    #         sphere_ray_group.add_sphere(
+    #             numpy.array([x, 0.3, z], dtype=numpy.single),
+    #             0.3,
+    #             RNG.uniform(low=0.0, high=1.0, size=3)
+    #         )
+
+    start_time = time.perf_counter()
+
+    print("Generating arrays")
+    ray_colours = numpy.ones(
+        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, MAX_BOUNCES + 1, 3), dtype=numpy.single
+    )
+
+    print("Filling ray arrays")
+    ray_origins, ray_directions = camera.get_ray_components(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES)
+    ray_origins = ray_origins.reshape(-1, 3)
+    ray_directions = ray_directions.reshape(-1, 3)
+    ray_colours = ray_colours.reshape(-1, MAX_BOUNCES + 1, 3)
+
+    # For the 0th bounce, every ray is active
+    active_ray_indecies = numpy.arange(ray_origins.shape[0])
+
+    bounce = 0
+    while bounce <= MAX_BOUNCES:
+        print(f"Bounce {bounce}")
+
+        if bounce != MAX_BOUNCES:
+            #This will need chunking like un numpy_render.
+            sphere_hit_indecies, sphere_hit_ts, sphere_hit_pts, sphere_hit_normals = sphere_ray_group.get_hits(
+                ray_origins[active_ray_indecies],
+                ray_directions[active_ray_indecies],
+                0.00001,
+                5000.0
+            )
+
+            ray_hits = sphere_hit_indecies > -1
+            ray_misses = sphere_hit_indecies < 0
+
+            scatter_ray_origins, scatter_ray_dirs = materials.numpy_point_on_hemisphere_material(
+                sphere_hit_pts,
+                sphere_hit_normals,
+            )
+            hit_colours = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
+
+            ray_origins[active_ray_indecies[ray_hits]] = scatter_ray_origins
+            ray_directions[active_ray_indecies[ray_hits]] = scatter_ray_dirs
+            ray_colours[active_ray_indecies[ray_hits], bounce] = hit_colours
+
+            ts = (ray_directions[active_ray_indecies[ray_misses], 1] + 1.0) * 0.5
+            ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
+
+            active_ray_indecies = active_ray_indecies[ray_hits]
+        else:
+            # hit_colours = numpy.zeros((active_ray_indecies.shape[0], 3), dtype=numpy.single)
+            ray_colours[active_ray_indecies, bounce] = 0.0
+
+        bounce += 1
+
+
+    ray_bounce_cols_multiplied = numpy.prod(ray_colours, axis=1)
+    ray_colours_stacked = ray_bounce_cols_multiplied.reshape(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3)
+    ray_cols_sample_avg = numpy.mean(ray_colours_stacked, axis=2)
+    sqrt_ray_cols = numpy.sqrt(ray_cols_sample_avg)
+    
+    print("Filling pixel data")
+    pixel_data = {}
+    for y_coord in range(IMG_HEIGHT):
+        for x_coord in range(IMG_WIDTH):
+            pixel_data[(x_coord, y_coord)] = sqrt_ray_cols[x_coord, y_coord]
+
+    end_time = time.perf_counter()
+    print(f"Total time: {end_time - start_time:0.4f} seconds.")
 
     return pixel_data
 
@@ -926,6 +1003,36 @@ def checkerboard_scene():
     return world, camera
 
 
+def numpy_comparison_scene():
+    cam_pos = numpy.array([5.0, 2.0, 10.0])
+    cam_lookat = numpy.array([0.0, 1.0, 0.0])
+    pos_to_lookat = cam_lookat - cam_pos
+    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    aperture = 0.0
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([1.0, 0.0, 0.0]))
+    green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.0, 1.0, 0.0]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.0, 0.0, 1.0]))
+
+    world = World()
+
+    all_spheres = SphereGroup()
+    # Ground
+    all_spheres.add_sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat)
+
+    # Spheres
+    all_spheres.add_sphere(numpy.array([-5.0, 2.0, 0.0]), 2.0, red_mat)
+    all_spheres.add_sphere(numpy.array([0.0, 2.0, 0.0]), 2.0, green_mat)
+    all_spheres.add_sphere(numpy.array([5.0, 2.0, 0.0]), 2.0, blue_mat)
+
+    world.renderables.append(all_spheres)
+
+    return world, camera
+
+
 def get_ray_colour(ray, world, depth):
     """
     Given a ray, get the colour from the scene
@@ -960,7 +1067,8 @@ def get_ray_colour(ray, world, depth):
 
 def main():
     print("Start render")
-    img_data = numpy_render()
+    # img_data = render()
+    img_data = numpy_bounce_render()
     print("End render")
     generate_image_from_data(img_data)
 
