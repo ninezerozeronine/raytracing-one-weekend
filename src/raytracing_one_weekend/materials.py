@@ -207,7 +207,9 @@ def numpy_point_on_hemisphere_material(hit_raydirs, hit_points, hit_normals):
 
     hit_cols = numpy.full((hit_points.shape[0], 3), 0.5, dtype=numpy.single)
 
-    return hit_points, pts_in_hemisph, hit_cols
+    absorbtions = numpy.full((hit_points.shape[0]), False)
+
+    return hit_points, pts_in_hemisph, hit_cols, absorbtions
 
 
 class PointInUnitSphereMaterial():
@@ -534,7 +536,8 @@ class MetalMaterial():
 def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
     reflected_dirs = hit_raydirs - (hit_normals * 2.0 * numpy.einsum("ij,ij->i", hit_normals, hit_raydirs)[..., numpy.newaxis])
     hit_cols = numpy.full((hit_points.shape[0], 3), 0.9, dtype=numpy.single)
-    return hit_points, reflected_dirs, hit_cols
+    absorbtions = numpy.full((hit_points.shape[0]), False)
+    return hit_points, reflected_dirs, hit_cols, absorbtions
 
 
 class DielectricMaterial():

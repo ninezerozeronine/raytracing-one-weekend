@@ -23,10 +23,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 100
+PIXEL_SAMPLES = 50
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -493,15 +493,18 @@ def numpy_bounce_render():
 
             ray_misses = numpy.logical_not(ray_hits)
 
+            material_absorbsions = numpy.full((ray_hits.shape[0]), False)
+
             for material_index, material in material_map.items():
                 material_matches = sphere_hit_material_indecies == material_index
 
-                scatter_ray_origins, scatter_ray_dirs, scatter_cols = material(
+                scatter_ray_origins, scatter_ray_dirs, scatter_cols, scatter_absorbtions = material(
                     ray_directions[active_ray_indecies[material_matches]],
                     sphere_hit_pts[material_matches],
                     sphere_hit_normals[material_matches],
                 )
 
+                material_absorbsions[material_matches] = scatter_absorbtions
                 ray_origins[active_ray_indecies[material_matches]] = scatter_ray_origins
                 ray_directions[active_ray_indecies[material_matches]] = scatter_ray_dirs
                 ray_colours[active_ray_indecies[material_matches], bounce] = scatter_cols
@@ -509,7 +512,8 @@ def numpy_bounce_render():
             ts = (ray_directions[active_ray_indecies[ray_misses], 1] + 1.0) * 0.5
             ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
 
-            active_ray_indecies = active_ray_indecies[ray_hits]
+            # The next round of rays are the ones that hit something and were not absorbed
+            active_ray_indecies = active_ray_indecies[numpy.logical_and(ray_hits, numpy.logical_not(material_absorbsions))]
         else:
             ray_colours[active_ray_indecies, bounce] = 0.0
 
