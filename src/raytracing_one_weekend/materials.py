@@ -166,7 +166,7 @@ class PointOnHemiSphereMaterial():
         )
 
 
-def numpy_point_on_hemisphere_material(hit_points, hit_normals):
+def numpy_point_on_hemisphere_material(hit_raydirs, hit_points, hit_normals):
 
     # Generate points in unit hemispheres pointing in the normal direction
 
@@ -205,7 +205,9 @@ def numpy_point_on_hemisphere_material(hit_points, hit_normals):
     # Bounce ray origins are the hit points we fed in
     # Bounce ray directions are the random points in the hemisphere.
 
-    return hit_points, pts_in_hemisph
+    hit_cols = numpy.full((hit_points.shape[0], 3), 0.5, dtype=numpy.single)
+
+    return hit_points, pts_in_hemisph, hit_cols
 
 
 class PointInUnitSphereMaterial():
@@ -531,8 +533,8 @@ class MetalMaterial():
 
 def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
     reflected_dirs = hit_raydirs - (hit_normals * 2.0 * numpy.einsum("ij,ij->i", hit_normals, hit_raydirs)[..., numpy.newaxis])
-
-    return hit_points, reflected_dirs
+    hit_cols = numpy.full((hit_points.shape[0], 3), 0.9, dtype=numpy.single)
+    return hit_points, reflected_dirs, hit_cols
 
 
 class DielectricMaterial():

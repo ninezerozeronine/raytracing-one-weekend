@@ -26,7 +26,7 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 10
+PIXEL_SAMPLES = 100
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -377,6 +377,12 @@ def numpy_bounce_render():
     aperture = 0.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
 
+
+    material_map = {
+        0: materials.numpy_point_on_hemisphere_material,
+        1: materials.numpy_metal_material,
+    }
+
     # Sphere setup
     sphere_ray_group = SphereGroupRayGroup()
 
@@ -385,6 +391,7 @@ def numpy_bounce_render():
         numpy.array([-4, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([1,0,0], dtype=numpy.single),
+        0
     )
 
     # Green
@@ -392,20 +399,23 @@ def numpy_bounce_render():
         numpy.array([0, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([0,1,0], dtype=numpy.single),
+        0
     )
 
-    # Blue
+    # Metal
     sphere_ray_group.add_sphere(
         numpy.array([4, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([0.9,0.9,0.9], dtype=numpy.single),
+        1
     )
 
     # Ground
     sphere_ray_group.add_sphere(
         numpy.array([0, -1000, 0],  dtype=numpy.single),
         1000.0,
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        0
     )
 
     with open("sphere_data.json") as file_handle:
@@ -416,7 +426,7 @@ def numpy_bounce_render():
         colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
         if sphere["material"] != "glass":
             colour = numpy.array(sphere["colour"])
-        sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour)
+        sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour, 0)
 
 
 
@@ -443,11 +453,19 @@ def numpy_bounce_render():
 
         if bounce != MAX_BOUNCES:
 
-            num_chunks = 5
+            num_chunks = 30
             ray_origins_chunks = numpy.array_split(ray_origins[active_ray_indecies], num_chunks)
             ray_directions_chunks = numpy.array_split(ray_directions[active_ray_indecies], num_chunks)
             print(f"Chunk 1 of {num_chunks}")
-            sphere_hit_indecies, sphere_hit_ts, sphere_hit_pts, sphere_hit_normals = sphere_ray_group.get_hits(
+            # Eeeeew - this is getting a bit out of hand :(
+            # Also need to catch the case where there are no hits.
+            (
+                ray_hits,
+                sphere_hit_ts,
+                sphere_hit_pts,
+                sphere_hit_normals,
+                sphere_hit_material_indecies
+            ) = sphere_ray_group.get_hits(
                 ray_origins_chunks[0],
                 ray_directions_chunks[0],
                 0.00001,
@@ -455,37 +473,44 @@ def numpy_bounce_render():
             )
             for chunk_index in range(1,num_chunks):
                 print(f"Chunk {chunk_index+1} of {num_chunks}")
-                sphere_hit_indecies_chunk, sphere_hit_ts_chunk, sphere_hit_pts_chunk, sphere_hit_normals_chunk = sphere_ray_group.get_hits(
+                (
+                    ray_hits_chunk,
+                    sphere_hit_ts_chunk,
+                    sphere_hit_pts_chunk,
+                    sphere_hit_normals_chunk,
+                    sphere_hit_material_indecies_chunk
+                ) = sphere_ray_group.get_hits(
                     ray_origins_chunks[chunk_index],
                     ray_directions_chunks[chunk_index],
                     0.00001,
                     5000.0
                 )
-                sphere_hit_indecies = numpy.concatenate((sphere_hit_indecies, sphere_hit_indecies_chunk), axis=0)
+                ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
                 sphere_hit_ts = numpy.concatenate((sphere_hit_ts, sphere_hit_ts_chunk), axis=0)
                 sphere_hit_pts = numpy.concatenate((sphere_hit_pts, sphere_hit_pts_chunk), axis=0)
                 sphere_hit_normals = numpy.concatenate((sphere_hit_normals, sphere_hit_normals_chunk), axis=0)
+                sphere_hit_material_indecies = numpy.concatenate((sphere_hit_material_indecies, sphere_hit_material_indecies_chunk), axis=0)
 
-            ray_hits = sphere_hit_indecies > -1
-            ray_misses = sphere_hit_indecies < 0
+            ray_misses = numpy.logical_not(ray_hits)
 
-            scatter_ray_origins, scatter_ray_dirs = materials.numpy_metal_material(
-                ray_directions[active_ray_indecies[ray_hits]],
-                sphere_hit_pts,
-                sphere_hit_normals,
-            )
-            hit_colours = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
+            for material_index, material in material_map.items():
+                material_matches = sphere_hit_material_indecies == material_index
 
-            ray_origins[active_ray_indecies[ray_hits]] = scatter_ray_origins
-            ray_directions[active_ray_indecies[ray_hits]] = scatter_ray_dirs
-            ray_colours[active_ray_indecies[ray_hits], bounce] = hit_colours
+                scatter_ray_origins, scatter_ray_dirs, scatter_cols = material(
+                    ray_directions[active_ray_indecies[material_matches]],
+                    sphere_hit_pts[material_matches],
+                    sphere_hit_normals[material_matches],
+                )
+
+                ray_origins[active_ray_indecies[material_matches]] = scatter_ray_origins
+                ray_directions[active_ray_indecies[material_matches]] = scatter_ray_dirs
+                ray_colours[active_ray_indecies[material_matches], bounce] = scatter_cols
 
             ts = (ray_directions[active_ray_indecies[ray_misses], 1] + 1.0) * 0.5
             ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
 
             active_ray_indecies = active_ray_indecies[ray_hits]
         else:
-            # hit_colours = numpy.zeros((active_ray_indecies.shape[0], 3), dtype=numpy.single)
             ray_colours[active_ray_indecies, bounce] = 0.0
 
         bounce += 1

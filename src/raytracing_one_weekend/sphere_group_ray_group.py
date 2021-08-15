@@ -16,12 +16,14 @@ class SphereGroupRayGroup():
         self.centres = None
         self.radii = None
         self.colours = None
+        self.material_indecies = None
 
-    def add_sphere(self, centre, radius, colour):
+    def add_sphere(self, centre, radius, colour, material_index):
         if self.centres is None:
             self.centres = numpy.array([centre], dtype=numpy.single)
             self.radii = numpy.array([radius], dtype=numpy.single)
             self.colours = numpy.array([colour], dtype=numpy.single)
+            self.material_indecies = numpy.array([material_index], dtype=numpy.ubyte)
         else:
             self.centres = numpy.append(
                 self.centres, numpy.array([centre], dtype=numpy.single), axis=0
@@ -31,6 +33,9 @@ class SphereGroupRayGroup():
             )
             self.colours = numpy.append(
                 self.colours, numpy.array([colour], dtype=numpy.single), axis=0
+            )
+            self.material_indecies = numpy.append(
+                self.material_indecies, numpy.array([material_index], dtype=numpy.ubyte), axis=0
             )
 
     def get_hits(self, ray_origins, ray_dirs, t_min, t_max):
@@ -104,31 +109,47 @@ class SphereGroupRayGroup():
         # sphere with the smallest t
         smallest_t_indecies = numpy.argmin(final_ts, axis=1)
 
-        # A 1D array num_rays long containing the t values for each ray
+        # A 1D array num_rays long containing the smallest t values for each ray
         smallest_ts = final_ts[numpy.arange(ray_origins.shape[0]), smallest_t_indecies]
+
+        # A 1D array num_rays long containing a true/false for whether
+        # the ray hit the sphere
+        ray_hits = smallest_ts < t_max
+
+        # Array of points (one point for each ray) where the rays hit.
+        # If the ray didn't hit anything, point gets set to 0
+        hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+        hit_points[ray_hits] = ray_origins[ray_hits] + ray_dirs[ray_hits] * smallest_ts[ray_hits][..., numpy.newaxis]
 
         # A 1D array num_rays long that contains the index of the
         # sphere with the smallest t, or -1 if the ray hit no spheres
         sphere_hit_indecies = numpy.where(
-            smallest_ts < t_max,
+            ray_hits,
             smallest_t_indecies,
             -1
         )
 
-        ray_hits = smallest_ts < t_max
-
-        # Unlike the other arrays, this isn't num_rays long. There's
-        # an entry for each ray that hit
-        hit_points = ray_origins[ray_hits] + ray_dirs[ray_hits] * smallest_ts[ray_hits][..., numpy.newaxis]
-
+        # Array of normals (one normal for each ray) where the rays hit.
+        # If the ray didn't hit anything, normal gets set to 0
         # Dividing by the radius is a quick way to normalise!
-        hit_normals = (hit_points - self.centres[sphere_hit_indecies[ray_hits]]) / self.radii[sphere_hit_indecies[ray_hits]][..., numpy.newaxis]
+        hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+        hit_normals[ray_hits] = (hit_points[ray_hits] - self.centres[sphere_hit_indecies[ray_hits]]) / self.radii[sphere_hit_indecies[ray_hits]][..., numpy.newaxis]
 
         # Displace hit points along normal a tiny bit
         # If you don't do this you get artefacts on large spheres.
         hit_points += hit_normals * 0.0001
 
+        # A 1D array num rays long that contains the index of the
+        # material that the ray hit. If it didn't hit, -1.
+        hit_material_indecies = numpy.where(
+            ray_hits,
+            self.material_indecies[sphere_hit_indecies],
+            -1
+        )
+
+        
+        # Will need to do this eventually to get the back facing stuff to work.
         # cosines = numpy.einsum("...ij,...ij->...i", hit_normals, ray_dirs[ray_hits])
         # hit_normals[cosines > 0.0] *= -1.0
 
-        return sphere_hit_indecies, smallest_ts, hit_points, hit_normals
+        return ray_hits, smallest_ts, hit_points, hit_normals, hit_material_indecies
