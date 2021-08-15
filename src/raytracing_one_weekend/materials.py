@@ -529,6 +529,12 @@ class MetalMaterial():
         )
 
 
+def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
+    reflected_dirs = hit_raydirs - (hit_normals * 2.0 * numpy.einsum("ij,ij->i", hit_normals, hit_raydirs)[..., numpy.newaxis])
+
+    return hit_points, reflected_dirs
+
+
 class DielectricMaterial():
     """
     A dielectic material description

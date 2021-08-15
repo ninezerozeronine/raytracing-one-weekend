@@ -26,7 +26,7 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 50
+PIXEL_SAMPLES = 10
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -319,45 +319,45 @@ def numpy_render():
 
 
 def numpy_bounce_render():
-    # Cam setup
-    cam_pos = numpy.array([5.0, 2.0, 10.0])
-    cam_lookat = numpy.array([0.0, 1.0, 0.0])
-    pos_to_lookat = cam_lookat - cam_pos
-    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
-    aperture = 0.5
-    horizontal_fov = 60.0
-    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+    # # Cam setup
+    # cam_pos = numpy.array([5.0, 2.0, 10.0])
+    # cam_lookat = numpy.array([0.0, 1.0, 0.0])
+    # pos_to_lookat = cam_lookat - cam_pos
+    # focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    # aperture = 0.5
+    # horizontal_fov = 60.0
+    # camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
 
-    # Sphere setup
-    sphere_ray_group = SphereGroupRayGroup()
+    # # Sphere setup
+    # sphere_ray_group = SphereGroupRayGroup()
 
-    # Red
-    sphere_ray_group.add_sphere(
-        numpy.array([-5, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([1,0,0], dtype=numpy.single),
-    )
+    # # Red
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([-5, 2, 0], dtype=numpy.single),
+    #     2.0,
+    #     numpy.array([1,0,0], dtype=numpy.single),
+    # )
 
-    # Green
-    sphere_ray_group.add_sphere(
-        numpy.array([0, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([0,1,0], dtype=numpy.single),
-    )
+    # # Green
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([0, 2, 0], dtype=numpy.single),
+    #     2.0,
+    #     numpy.array([0,1,0], dtype=numpy.single),
+    # )
 
-    # Blue
-    sphere_ray_group.add_sphere(
-        numpy.array([5, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([0,0,1], dtype=numpy.single),
-    )
+    # # Blue
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([5, 2, 0], dtype=numpy.single),
+    #     2.0,
+    #     numpy.array([0,0,1], dtype=numpy.single),
+    # )
 
-    # Ground
-    sphere_ray_group.add_sphere(
-        numpy.array([0, -1000, 0],  dtype=numpy.single),
-        1000.0,
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    )
+    # # Ground
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([0, -1000, 0],  dtype=numpy.single),
+    #     1000.0,
+    #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    # )
 
 
     # # Bunch of small spheres
@@ -368,6 +368,58 @@ def numpy_bounce_render():
     #             0.3,
     #             RNG.uniform(low=0.0, high=1.0, size=3)
     #         )
+
+
+    cam_pos = numpy.array([13.0, 2.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    #aperture = 0.1
+    aperture = 0.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Red
+    sphere_ray_group.add_sphere(
+        numpy.array([-4, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+    )
+
+    # Green
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([0,1,0], dtype=numpy.single),
+    )
+
+    # Blue
+    sphere_ray_group.add_sphere(
+        numpy.array([4, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([0.9,0.9,0.9], dtype=numpy.single),
+    )
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0, -1000, 0],  dtype=numpy.single),
+        1000.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    with open("sphere_data.json") as file_handle:
+        sphere_data = json.load(file_handle)
+
+    print(len(sphere_data))
+    for sphere in sphere_data:
+        colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+        if sphere["material"] != "glass":
+            colour = numpy.array(sphere["colour"])
+        sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour)
+
+
+
 
     start_time = time.perf_counter()
 
@@ -387,21 +439,38 @@ def numpy_bounce_render():
 
     bounce = 0
     while bounce <= MAX_BOUNCES:
-        print(f"Bounce {bounce}")
+        print(f"Bounce {bounce} of {MAX_BOUNCES}, {active_ray_indecies.shape[0]} rays.")
 
         if bounce != MAX_BOUNCES:
-            #This will need chunking like un numpy_render.
+
+            num_chunks = 5
+            ray_origins_chunks = numpy.array_split(ray_origins[active_ray_indecies], num_chunks)
+            ray_directions_chunks = numpy.array_split(ray_directions[active_ray_indecies], num_chunks)
+            print(f"Chunk 1 of {num_chunks}")
             sphere_hit_indecies, sphere_hit_ts, sphere_hit_pts, sphere_hit_normals = sphere_ray_group.get_hits(
-                ray_origins[active_ray_indecies],
-                ray_directions[active_ray_indecies],
+                ray_origins_chunks[0],
+                ray_directions_chunks[0],
                 0.00001,
                 5000.0
             )
+            for chunk_index in range(1,num_chunks):
+                print(f"Chunk {chunk_index+1} of {num_chunks}")
+                sphere_hit_indecies_chunk, sphere_hit_ts_chunk, sphere_hit_pts_chunk, sphere_hit_normals_chunk = sphere_ray_group.get_hits(
+                    ray_origins_chunks[chunk_index],
+                    ray_directions_chunks[chunk_index],
+                    0.00001,
+                    5000.0
+                )
+                sphere_hit_indecies = numpy.concatenate((sphere_hit_indecies, sphere_hit_indecies_chunk), axis=0)
+                sphere_hit_ts = numpy.concatenate((sphere_hit_ts, sphere_hit_ts_chunk), axis=0)
+                sphere_hit_pts = numpy.concatenate((sphere_hit_pts, sphere_hit_pts_chunk), axis=0)
+                sphere_hit_normals = numpy.concatenate((sphere_hit_normals, sphere_hit_normals_chunk), axis=0)
 
             ray_hits = sphere_hit_indecies > -1
             ray_misses = sphere_hit_indecies < 0
 
-            scatter_ray_origins, scatter_ray_dirs = materials.numpy_point_on_hemisphere_material(
+            scatter_ray_origins, scatter_ray_dirs = materials.numpy_metal_material(
+                ray_directions[active_ray_indecies[ray_hits]],
                 sphere_hit_pts,
                 sphere_hit_normals,
             )
@@ -1027,6 +1096,16 @@ def numpy_comparison_scene():
     all_spheres.add_sphere(numpy.array([-5.0, 2.0, 0.0]), 2.0, red_mat)
     all_spheres.add_sphere(numpy.array([0.0, 2.0, 0.0]), 2.0, green_mat)
     all_spheres.add_sphere(numpy.array([5.0, 2.0, 0.0]), 2.0, blue_mat)
+
+    # Bunch of small spheres
+    for x in range(-10, 10):
+        for z in range(-10, 10):
+            mat = materials.PointOnHemiSphereMaterial(RNG.uniform(low=0.0, high=1.0, size=3))
+            all_spheres.add_sphere(
+                numpy.array([x, 0.3, z], dtype=numpy.single),
+                0.3,
+                mat
+            )
 
     world.renderables.append(all_spheres)
 
