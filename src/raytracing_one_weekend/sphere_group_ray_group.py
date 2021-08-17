@@ -137,7 +137,13 @@ class SphereGroupRayGroup():
 
         # Displace hit points along normal a tiny bit
         # If you don't do this you get artefacts on large spheres.
-        hit_points += hit_normals * 0.0001
+        # hit_points += hit_normals * 0.0001
+
+        # Find out if any of the rays hit the back of the sphere
+        cosines = numpy.einsum("ij,ij->i", hit_normals, ray_dirs)
+        back_facing = cosines > 0.0
+        # If they did, reverse the normal so it's facing the incoming ray
+        hit_normals[back_facing] *= -1.0
 
         # A 1D array num rays long that contains the index of the
         # material that the ray hit. If it didn't hit, -1.
@@ -147,9 +153,4 @@ class SphereGroupRayGroup():
             -1
         )
 
-        
-        # Will need to do this eventually to get the back facing stuff to work.
-        # cosines = numpy.einsum("...ij,...ij->...i", hit_normals, ray_dirs[ray_hits])
-        # hit_normals[cosines > 0.0] *= -1.0
-
-        return ray_hits, smallest_ts, hit_points, hit_normals, hit_material_indecies
+        return ray_hits, smallest_ts, hit_points, hit_normals, hit_material_indecies, back_facing

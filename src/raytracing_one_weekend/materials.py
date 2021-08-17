@@ -166,41 +166,15 @@ class PointOnHemiSphereMaterial():
         )
 
 
-def numpy_point_on_hemisphere_material(hit_raydirs, hit_points, hit_normals):
+def numpy_point_on_hemisphere_material(hit_raydirs, hit_points, hit_normals, hit_backfaces):
 
     # Generate points in unit hemispheres pointing in the normal direction
-
-    # Start by generating points in the cube that bounds the sphere
-    pts_in_hemisph = RNG.uniform(low=-1.0, high=1.0, size=(hit_points.shape[0], 3))
-    pts_in_hemisph = pts_in_hemisph.astype(numpy.single)
-
-    # Would be good to optimise this so that we only check the newly
-    # regenerated points
-    while True:
-        lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
-
-        invalid_pts = lengths_squared > 1.0
-        num_bad_pts = numpy.count_nonzero(invalid_pts)
-        if num_bad_pts == 0:
-            break
-        new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
-        new_pts = new_pts.astype(numpy.single)
-        pts_in_hemisph[invalid_pts] = new_pts
+    ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
 
     # Reverse any points in the wrong hemisphere
-    cosine_angles = numpy.einsum("ij,ij->i", pts_in_hemisph, hit_normals)
+    cosine_angles = numpy.einsum("ij,ij->i", ray_dirs, hit_normals)
     facing_wrong_way = cosine_angles < 0.0
-    pts_in_hemisph[facing_wrong_way] *= -1.0
-
-
-    # Make sure none of the points are very close to 0,0,0. If they
-    # are, replace with normal
-    lengths_squared = numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph)
-    too_short = lengths_squared < 0.000001
-    pts_in_hemisph[too_short] = hit_normals[too_short]
-
-    # Normalise the normals
-    pts_in_hemisph /= numpy.sqrt(numpy.einsum("ij,ij->i", pts_in_hemisph, pts_in_hemisph))[..., numpy.newaxis]
+    ray_dirs[facing_wrong_way] *= -1.0
 
     # Bounce ray origins are the hit points we fed in
     # Bounce ray directions are the random points in the hemisphere.
@@ -209,7 +183,7 @@ def numpy_point_on_hemisphere_material(hit_raydirs, hit_points, hit_normals):
 
     absorbtions = numpy.full((hit_points.shape[0]), False)
 
-    return hit_points, pts_in_hemisph, hit_cols, absorbtions
+    return hit_points, ray_dirs, hit_cols, absorbtions
 
 
 class PointInUnitSphereMaterial():
@@ -533,9 +507,9 @@ class MetalMaterial():
         )
 
 
-def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
+def numpy_metal_material(hit_raydirs, hit_points, hit_normals, hit_backfaces):
     fuzziness = 0.1
-    reflected_dirs = hit_raydirs - (hit_normals * 2.0 * numpy.einsum("ij,ij->i", hit_normals, hit_raydirs)[..., numpy.newaxis])
+    reflected_dirs = numpy_reflect(hit_raydirs, hit_normals)
 
     hit_cols = numpy.full((hit_points.shape[0], 3), 0.9, dtype=numpy.single)
     absorbtions = numpy.full((hit_points.shape[0]), False)
@@ -555,6 +529,11 @@ def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
 
 
 def numpy_random_unit_vecs(num_vecs):
+    """
+    Generate unit length vectors on the surface of a sphere with radius
+    1.
+    """
+
     # Start by generating points in the cube that bound the unit sphere
     vecs = RNG.uniform(low=-1.0, high=1.0, size=(num_vecs, 3))
     vecs = vecs.astype(numpy.single)
@@ -564,7 +543,12 @@ def numpy_random_unit_vecs(num_vecs):
     while True:
         lengths_squared = numpy.einsum("ij,ij->i", vecs, vecs)
 
-        invalid_pts = lengths_squared > 1.0
+        # Catch points that lie outside the sphere or very close to the
+        # centre.
+        invalid_pts = numpy.logical_or(
+            lengths_squared > 1.0,
+            lengths_squared < 0.00001
+        )
         num_bad_pts = numpy.count_nonzero(invalid_pts)
         if num_bad_pts == 0:
             break
@@ -687,6 +671,113 @@ class DielectricMaterial():
         return r0 + (1 - r0) * (1 - cosine)**5
 
 
+def numpy_dielectric_material(hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    """
+
+    """
+    ior = 1.5
+
+    colour = numpy.array([1.0, 1.0, 1.0])
+
+    refraction_ratios = numpy.full(hit_raydirs.shape[0], ior, dtype=numpy.single)
+    frontfaces = numpy.logical_not(hit_backfaces)
+    refraction_ratios = numpy.where(frontfaces, 1.0/refraction_ratios, refraction_ratios)
+
+    # cos_thetas = numpy.minimum(
+    #     numpy.einsum("ij,ij->i", (-1.0 * hit_raydirs), hit_normals),
+    #     1.0
+    # )
+    # sin_thetas = numpy.sqrt(1.0 - cos_thetas ** 2)
+    # cannot_refract = (refraction_ratios * sin_thetas) > 1.0
+
+    # reflectances = numpy_reflectance(cos_thetas, refraction_ratios)
+    # reflectance_too_high = reflectances > RNG.uniform(low=0.0, high=1.0, size=(hit_raydirs.shape[0]))
+
+    # to_reflect = numpy.logical_or(cannot_refract, reflectance_too_high)
+    # to_refract = numpy.logical_not(to_reflect)
+
+    # scattered_dirs = numpy.full((hit_raydirs.shape[0], 3), 0.0, dtype=numpy.single)
+    # scattered_dirs[to_reflect] = numpy_reflect(hit_raydirs[to_reflect], hit_normals[to_reflect])
+
+    # scattered_dirs[to_refract] = numpy_refract(
+    #     hit_raydirs[to_refract],
+    #     hit_normals[to_refract],
+    #     refraction_ratios[to_refract]
+    # )
+
+    scattered_dirs = numpy_refract(
+        hit_raydirs,
+        hit_normals,
+        refraction_ratios
+    )
+
+    # scattered_dirs = numpy_reflect(hit_raydirs, hit_normals)
+
+    hit_cols = numpy.full((hit_points.shape[0], 3), 1.0, dtype=numpy.single)
+    absorbtions = numpy.full((hit_points.shape[0]), False)
+
+    return hit_points, scattered_dirs, hit_cols, absorbtions
+
+
+def numpy_reflectance(cosines, ref_idxs):
+    """
+    Calculate the reflectance using Schlick's approximation.
+
+    I have no idea whats going on in here. Stolen from:
+    https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/schlickapproximation
+
+    Args:
+        cosines (numpy.ndarray): Cosine of ... some angle :(. 1D array
+            of floats.
+        ref_idxs (numpy.ndarray): A way of describing the refractive
+            indecies of the materials on either side of the boundary
+            between them. 1D array of floats
+    Returns:
+        numpy.ndarray: A reflectance angle? 1D array of floads
+    """
+
+    r0 = (1.0 - ref_idxs) / (1.0 + ref_idxs)
+    r0 = numpy.power(r0, 2)
+    return r0 + ((1.0 - r0) * ((1.0 - cosines) ** 5))
+
+
+def numpy_refract(in_directions, normals, etai_over_etats):
+        """
+        Calculate the refracted ray.
+
+        I have almost no idea what's going on in here :(. Stolen from
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+
+        Args:
+            in_directions (numpy.ndarray): The direction of the incoming
+                ray (needs to be unit length). Array of floats, shape
+                (n,3).
+            normals (numpy.ndarray): The normal of the surface at the hit
+                point. Array of floats, shape (n,3).
+            etai_over_etats (numpy.ndarray): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them. 1D array of floats.
+        Returns:
+            numpy.ndarray: The direction of the refracted ray
+        """
+
+        cos_thetas = numpy.minimum(
+            numpy.einsum("ij,ij->i", (-1.0 * in_directions), normals),
+            1.0
+        )
+        r_out_perps = etai_over_etats[..., numpy.newaxis] * (in_directions + (cos_thetas[..., numpy.newaxis] * normals))
+        r_out_perps_len_squareds = numpy.einsum("ij,ij->i", r_out_perps, r_out_perps)
+        r_out_parallels = (-1.0 * numpy.sqrt(numpy.abs(1.0 - r_out_perps_len_squareds)))[..., numpy.newaxis] * normals
+        return r_out_perps + r_out_parallels
+
+
+        # cos_theta = min(-in_direction.dot(normal), 1.0)
+        # r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
+        # r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
+        # r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
+        # return r_out_perp + r_out_parallel
+
+
 def reflect(in_direction, surface_normal):
     """
     Reflect a ray off a surface facing a given direction.
@@ -717,6 +808,14 @@ def reflect(in_direction, surface_normal):
         in_direction
         - (2 * in_direction.dot(surface_normal)) * surface_normal
     )
+
+
+def numpy_reflect(ray_dirs, surface_normals):
+    """
+    Find the direction of reflection for a ray hitting a surface with a
+    given normal.
+    """
+    return ray_dirs - (surface_normals * 2.0 * numpy.einsum("ij,ij->i", surface_normals, ray_dirs)[..., numpy.newaxis])
 
 
 def random_vec_in_unit_hemisphere(hemisphere_direction):

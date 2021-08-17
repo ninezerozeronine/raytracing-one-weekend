@@ -26,7 +26,7 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 100
+PIXEL_SAMPLES = 20
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -381,6 +381,7 @@ def numpy_bounce_render():
     material_map = {
         0: materials.numpy_point_on_hemisphere_material,
         1: materials.numpy_metal_material,
+        2: materials.numpy_dielectric_material
     }
 
     # Sphere setup
@@ -407,7 +408,7 @@ def numpy_bounce_render():
         numpy.array([4, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([0.9,0.9,0.9], dtype=numpy.single),
-        1
+        2
     )
 
     # Ground
@@ -418,15 +419,15 @@ def numpy_bounce_render():
         0
     )
 
-    with open("sphere_data.json") as file_handle:
-        sphere_data = json.load(file_handle)
+    # with open("sphere_data.json") as file_handle:
+    #     sphere_data = json.load(file_handle)
 
-    print(len(sphere_data))
-    for sphere in sphere_data:
-        colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-        if sphere["material"] != "glass":
-            colour = numpy.array(sphere["colour"])
-        sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour, 0)
+    # print(len(sphere_data))
+    # for sphere in sphere_data:
+    #     colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    #     if sphere["material"] != "glass":
+    #         colour = numpy.array(sphere["colour"])
+    #     sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour, 0)
 
 
 
@@ -464,7 +465,8 @@ def numpy_bounce_render():
                 sphere_hit_ts,
                 sphere_hit_pts,
                 sphere_hit_normals,
-                sphere_hit_material_indecies
+                sphere_hit_material_indecies,
+                back_facing
             ) = sphere_ray_group.get_hits(
                 ray_origins_chunks[0],
                 ray_directions_chunks[0],
@@ -478,7 +480,8 @@ def numpy_bounce_render():
                     sphere_hit_ts_chunk,
                     sphere_hit_pts_chunk,
                     sphere_hit_normals_chunk,
-                    sphere_hit_material_indecies_chunk
+                    sphere_hit_material_indecies_chunk,
+                    back_facing_chunk
                 ) = sphere_ray_group.get_hits(
                     ray_origins_chunks[chunk_index],
                     ray_directions_chunks[chunk_index],
@@ -490,6 +493,7 @@ def numpy_bounce_render():
                 sphere_hit_pts = numpy.concatenate((sphere_hit_pts, sphere_hit_pts_chunk), axis=0)
                 sphere_hit_normals = numpy.concatenate((sphere_hit_normals, sphere_hit_normals_chunk), axis=0)
                 sphere_hit_material_indecies = numpy.concatenate((sphere_hit_material_indecies, sphere_hit_material_indecies_chunk), axis=0)
+                back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
 
             ray_misses = numpy.logical_not(ray_hits)
 
@@ -502,6 +506,7 @@ def numpy_bounce_render():
                     ray_directions[active_ray_indecies[material_matches]],
                     sphere_hit_pts[material_matches],
                     sphere_hit_normals[material_matches],
+                    back_facing[material_matches]
                 )
 
                 material_absorbsions[material_matches] = scatter_absorbtions
