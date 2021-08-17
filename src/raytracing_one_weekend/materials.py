@@ -534,10 +534,48 @@ class MetalMaterial():
 
 
 def numpy_metal_material(hit_raydirs, hit_points, hit_normals):
+    fuzziness = 0.1
     reflected_dirs = hit_raydirs - (hit_normals * 2.0 * numpy.einsum("ij,ij->i", hit_normals, hit_raydirs)[..., numpy.newaxis])
+
     hit_cols = numpy.full((hit_points.shape[0], 3), 0.9, dtype=numpy.single)
     absorbtions = numpy.full((hit_points.shape[0]), False)
+
+    if fuzziness > 0.0001:
+        fuzz_offests = numpy_random_unit_vecs(hit_points.shape[0]) * fuzziness
+        reflected_dirs += fuzz_offests
+        reflected_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", reflected_dirs, reflected_dirs))[..., numpy.newaxis]
+
+        cos_angles = numpy.einsum("ij,ij->i", reflected_dirs, hit_normals)
+        scattered_inside = cos_angles < 0.00001
+        hit_cols[scattered_inside] = 0.0
+        absorbtions[scattered_inside] = True
+
+
     return hit_points, reflected_dirs, hit_cols, absorbtions
+
+
+def numpy_random_unit_vecs(num_vecs):
+    # Start by generating points in the cube that bound the unit sphere
+    vecs = RNG.uniform(low=-1.0, high=1.0, size=(num_vecs, 3))
+    vecs = vecs.astype(numpy.single)
+
+    # Would be good to optimise this so that we only check the newly
+    # regenerated points
+    while True:
+        lengths_squared = numpy.einsum("ij,ij->i", vecs, vecs)
+
+        invalid_pts = lengths_squared > 1.0
+        num_bad_pts = numpy.count_nonzero(invalid_pts)
+        if num_bad_pts == 0:
+            break
+        new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+        new_pts = new_pts.astype(numpy.single)
+        vecs[invalid_pts] = new_pts
+
+    # Normalise all the results
+    vecs /= numpy.sqrt(numpy.einsum("ij,ij->i", vecs, vecs))[..., numpy.newaxis]
+
+    return vecs
 
 
 class DielectricMaterial():

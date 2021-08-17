@@ -23,10 +23,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 50
+PIXEL_SAMPLES = 100
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
