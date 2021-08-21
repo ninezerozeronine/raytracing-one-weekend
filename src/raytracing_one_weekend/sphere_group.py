@@ -47,40 +47,18 @@ class SphereGroup():
         mask = discriminants > 0.00001
         larger_ts[mask] = -Hs[mask] + numpy.sqrt(discriminants[mask])
 
-        # https://stackoverflow.com/questions/37973135/numpy-argmin-for-elements-greater-than-a-threshold
-        valid_idxs = numpy.where(smaller_ts > t_min)[0]
-        if valid_idxs.size > 0:
-            smallest_smaller_t_index = valid_idxs[smaller_ts[valid_idxs].argmin()]
-        else:
-            smallest_smaller_t_index = -1
-
-        valid_idxs = numpy.where(larger_ts > t_min)[0]
-        if valid_idxs.size > 0:
-            smallest_larger_t_index = valid_idxs[larger_ts[valid_idxs].argmin()]
-        else:
-            smallest_larger_t_index = -1
-
-        if (smallest_smaller_t_index == -1) and (smallest_larger_t_index == -1):
+        smaller_ts[smaller_ts < t_min] = t_max + 1
+        larger_ts[larger_ts < t_min] = t_max + 1
+        smallest_ts = numpy.minimum(smaller_ts, larger_ts)
+        index = numpy.argmin(smallest_ts)
+        t = smallest_ts[index]
+        if t > t_max:
             return False, None
-
-        if smallest_smaller_t_index != -1:
-            t = smaller_ts[smallest_smaller_t_index]
-            index = smallest_smaller_t_index
-            if t > t_max:
-                t = larger_ts[smallest_larger_t_index]
-                index = smallest_larger_t_index
-                if t > t_max:
-                    return False, None
-        else:
-            t = larger_ts[smallest_larger_t_index]
-            index = smallest_larger_t_index
-            if t > t_max:
-                return False, None
 
         hit_point = ray.at(t)
         # Dividing by the radius is a quick way to normalise!
         normal = (hit_point - self.centres[index]) / self.radii[index]
-        hit_point += normal * 0.0001
+        # hit_point += normal * 0.0001
         side = renderable.Side.FRONT
         # In the typical case the ray is outside the sphere, and
         # the normal is facing "toward" the ray. This means the

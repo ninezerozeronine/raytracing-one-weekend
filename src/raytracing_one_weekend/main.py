@@ -89,7 +89,7 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = numpy_comparison_scene()
+    world, camera = dielectric_debug_scene()
 
     img_data = {}
     pixel_coords = (
@@ -372,7 +372,7 @@ def numpy_bounce_render():
 
     cam_pos = numpy.array([13.0, 2.0, 3.0])
     cam_lookat = numpy.array([0.0, 0.5, 0.0])
-    focus_dist = 10
+    focus_dist = 10.0
     #aperture = 0.1
     aperture = 0.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
@@ -1142,6 +1142,44 @@ def numpy_comparison_scene():
             )
 
     world.renderables.append(all_spheres)
+
+    return world, camera
+
+
+def dielectric_debug_scene():
+    cam_pos = numpy.array([13.0, 2.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10.0
+    aperture = 0.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    glass_mat = materials.DielectricMaterial(1.5)
+
+    world = World()
+
+    # Ground
+    # world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
+
+    # # Brown, Glass, Metal
+    # world.renderables.append(Sphere(numpy.array([-4.0, 1.0, 0.0]), 1.0, ground_mat))
+    # world.renderables.append(Sphere(numpy.array([0.0, 1.0, 0.0]), 1.0, ground_mat))
+    # world.renderables.append(Sphere(numpy.array([4.0, 1.0, 0.0]), 1.0, glass_mat))
+
+
+
+    # Ground
+    all_spheres = SphereGroup()
+    all_spheres.add_sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat)
+
+    # Brown, Glass, Metal
+    all_spheres.add_sphere(numpy.array([-4.0, 1.0, 0.0]), 1.0, ground_mat)
+    all_spheres.add_sphere(numpy.array([0.0, 1.0, 0.0]), 1.0, ground_mat)
+    all_spheres.add_sphere(numpy.array([4.0, 1.0, 0.0]), 1.0, glass_mat)
+
+    world.renderables.append(all_spheres)
+
+
 
     return world, camera
 

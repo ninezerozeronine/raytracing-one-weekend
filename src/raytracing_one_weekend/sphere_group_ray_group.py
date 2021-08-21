@@ -78,48 +78,54 @@ class SphereGroupRayGroup():
         del Cs
 
 
+        # Also a grid of scalars num_rays by num_spheres in size.
+        # For each ray (row) it lists (column) the value of t where that
+        # ray hit the sphere. If it didn't it gets set to a large number.
         mask = discriminants > 0.00001
         smaller_ts = numpy.full_like(discriminants, t_max + 1.0)
         smaller_ts[mask] = -Hs[mask] - numpy.sqrt(discriminants[mask])
         larger_ts = numpy.full_like(discriminants, t_max + 1.0)
         larger_ts[mask] = -Hs[mask] + numpy.sqrt(discriminants[mask])
 
-        # sqrt_discriminants = numpy.sqrt(numpy.maximum(0.00001, discriminants))
+        # If the value is less than t_min, set it to a value thats too big
+        smaller_ts[smaller_ts < t_min] = t_max + 1
+        larger_ts[larger_ts < t_min] = t_max + 1
 
-        # # Also a grid of scalars num_rays by num_spheres in size.
-        # # For each ray (row) it lists (column) the value of t where that
-        # # ray hit the sphere. If it didn't it gets set to a large number.
-        # smaller_ts = -Hs - sqrt_discriminants
-        # larger_ts = -Hs + sqrt_discriminants
+        # Take the smaller of the two
+        smallest_ts = numpy.minimum(smaller_ts, larger_ts)
 
-        # This takes the smaller of the two, as long as it's positive
-        all_ts = numpy.where(
-            (smaller_ts > 0.0) & (smaller_ts < larger_ts),
-            smaller_ts,
-            larger_ts
-        )
         # This saves some memory
         del smaller_ts
         del larger_ts
-        # Here we filter out any discriminants that were less than 0
-        t_filter = (discriminants > 0.00001) & (all_ts > t_min) & (all_ts < t_max)
-        final_ts = numpy.where(t_filter, all_ts, t_max + 1.0)
+
+        # # This takes the smaller of the two, as long as it's positive
+        # all_ts = numpy.where(
+        #     (smaller_ts > 0.0) & (smaller_ts < larger_ts),
+        #     smaller_ts,
+        #     larger_ts
+        # )
+        # # This saves some memory
+        # del smaller_ts
+        # del larger_ts
+        # # Here we filter out any discriminants that were less than 0
+        # t_filter = (discriminants > 0.00001) & (all_ts > t_min) & (all_ts < t_max)
+        # final_ts = numpy.where(t_filter, all_ts, t_max + 1.0)
 
         # A 1D array num_rays long that contains the index of the
         # sphere with the smallest t
-        smallest_t_indecies = numpy.argmin(final_ts, axis=1)
+        smallest_t_indecies = numpy.argmin(smallest_ts, axis=1)
 
         # A 1D array num_rays long containing the smallest t values for each ray
-        smallest_ts = final_ts[numpy.arange(ray_origins.shape[0]), smallest_t_indecies]
+        final_ts = smallest_ts[numpy.arange(smallest_ts.shape[0]), smallest_t_indecies]
 
         # A 1D array num_rays long containing a true/false for whether
         # the ray hit the sphere
-        ray_hits = smallest_ts < t_max
+        ray_hits = final_ts < t_max
 
         # Array of points (one point for each ray) where the rays hit.
         # If the ray didn't hit anything, point gets set to 0
         hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-        hit_points[ray_hits] = ray_origins[ray_hits] + ray_dirs[ray_hits] * smallest_ts[ray_hits][..., numpy.newaxis]
+        hit_points[ray_hits] = ray_origins[ray_hits] + ray_dirs[ray_hits] * final_ts[ray_hits][..., numpy.newaxis]
 
         # A 1D array num_rays long that contains the index of the
         # sphere with the smallest t, or -1 if the ray hit no spheres
@@ -153,4 +159,4 @@ class SphereGroupRayGroup():
             -1
         )
 
-        return ray_hits, smallest_ts, hit_points, hit_normals, hit_material_indecies, back_facing
+        return ray_hits, final_ts, hit_points, hit_normals, hit_material_indecies, back_facing

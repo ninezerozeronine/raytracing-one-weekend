@@ -530,8 +530,7 @@ def numpy_metal_material(hit_raydirs, hit_points, hit_normals, hit_backfaces):
 
 def numpy_random_unit_vecs(num_vecs):
     """
-    Generate unit length vectors on the surface of a sphere with radius
-    1.
+    Generate random unit length vectors
     """
 
     # Start by generating points in the cube that bound the unit sphere
@@ -611,13 +610,17 @@ class DielectricMaterial():
         reflectance_too_high = reflectance > random.random()
 
         if cannot_refract or reflectance_too_high:
-            refracted_dir = reflect(in_ray.direction, hit_record.normal)
+            scattered_dir = reflect(in_ray.direction, hit_record.normal)
         else:
-            refracted_dir = self.refract(
+            scattered_dir = self.refract(
                 in_ray.direction, hit_record.normal, refraction_ratio
             )
 
-        scattered_ray = Ray(hit_record.hit_point, refracted_dir)
+        # refracted_dir = self.refract(
+        #     in_ray.direction, hit_record.normal, refraction_ratio
+        # )
+
+        scattered_ray = Ray(hit_record.hit_point, scattered_dir)
 
         return (
             absorbed,
@@ -683,33 +686,36 @@ def numpy_dielectric_material(hit_raydirs, hit_points, hit_normals, hit_backface
     frontfaces = numpy.logical_not(hit_backfaces)
     refraction_ratios = numpy.where(frontfaces, 1.0/refraction_ratios, refraction_ratios)
 
-    # cos_thetas = numpy.minimum(
-    #     numpy.einsum("ij,ij->i", (-1.0 * hit_raydirs), hit_normals),
-    #     1.0
-    # )
-    # sin_thetas = numpy.sqrt(1.0 - cos_thetas ** 2)
-    # cannot_refract = (refraction_ratios * sin_thetas) > 1.0
-
-    # reflectances = numpy_reflectance(cos_thetas, refraction_ratios)
-    # reflectance_too_high = reflectances > RNG.uniform(low=0.0, high=1.0, size=(hit_raydirs.shape[0]))
-
-    # to_reflect = numpy.logical_or(cannot_refract, reflectance_too_high)
-    # to_refract = numpy.logical_not(to_reflect)
-
-    # scattered_dirs = numpy.full((hit_raydirs.shape[0], 3), 0.0, dtype=numpy.single)
-    # scattered_dirs[to_reflect] = numpy_reflect(hit_raydirs[to_reflect], hit_normals[to_reflect])
-
-    # scattered_dirs[to_refract] = numpy_refract(
-    #     hit_raydirs[to_refract],
-    #     hit_normals[to_refract],
-    #     refraction_ratios[to_refract]
-    # )
-
-    scattered_dirs = numpy_refract(
-        hit_raydirs,
-        hit_normals,
-        refraction_ratios
+    cos_thetas = numpy.minimum(
+        numpy.einsum("ij,ij->i", (-1.0 * hit_raydirs), hit_normals),
+        1.0
     )
+    sin_thetas = numpy.sqrt(1.0 - cos_thetas ** 2)
+    cannot_refract = (refraction_ratios * sin_thetas) > 1.0
+
+    reflectances = numpy_reflectance(cos_thetas, refraction_ratios)
+    reflectance_too_high = reflectances > RNG.uniform(low=0.0, high=1.0, size=(hit_raydirs.shape[0]))
+
+    to_reflect = numpy.logical_or(cannot_refract, reflectance_too_high)
+    to_refract = numpy.logical_not(to_reflect)
+
+    scattered_dirs = numpy.full((hit_raydirs.shape[0], 3), 0.0, dtype=numpy.single)
+    scattered_dirs[to_reflect] = numpy_reflect(hit_raydirs[to_reflect], hit_normals[to_reflect])
+
+    scattered_dirs[to_refract] = numpy_refract(
+        hit_raydirs[to_refract],
+        hit_normals[to_refract],
+        refraction_ratios[to_refract]
+    )
+
+    # scattered_dirs = numpy_refract(
+    #     hit_raydirs,
+    #     hit_normals,
+    #     refraction_ratios
+    # )
+
+    # Normalise
+    # scattered_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", scattered_dirs, scattered_dirs))[..., numpy.newaxis]
 
     # scattered_dirs = numpy_reflect(hit_raydirs, hit_normals)
 
@@ -737,7 +743,7 @@ def numpy_reflectance(cosines, ref_idxs):
     """
 
     r0 = (1.0 - ref_idxs) / (1.0 + ref_idxs)
-    r0 = numpy.power(r0, 2)
+    r0 = r0 ** 2
     return r0 + ((1.0 - r0) * ((1.0 - cosines) ** 5))
 
 
@@ -815,7 +821,7 @@ def numpy_reflect(ray_dirs, surface_normals):
     Find the direction of reflection for a ray hitting a surface with a
     given normal.
     """
-    return ray_dirs - (surface_normals * 2.0 * numpy.einsum("ij,ij->i", surface_normals, ray_dirs)[..., numpy.newaxis])
+    return ray_dirs - (surface_normals * 2.0 * numpy.einsum("ij,ij->i", ray_dirs, surface_normals)[..., numpy.newaxis])
 
 
 def random_vec_in_unit_hemisphere(hemisphere_direction):

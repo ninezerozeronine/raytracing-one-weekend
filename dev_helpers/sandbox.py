@@ -18,7 +18,16 @@ RNG = numpy.random.default_rng()
 
 sys.path.append(os.path.abspath("../src"))
 
-from raytracing_one_weekend import main, mttriangle_group, obj_tri_mesh
+from raytracing_one_weekend import (
+    main,
+    mttriangle_group,
+    obj_tri_mesh,
+    sphere_group_ray_group,
+    sphere, sphere_group,
+    ray,
+    renderable,
+    materials
+)
 
 
 def write_sphere_json():
@@ -1341,6 +1350,406 @@ def test_array_slice(length, num_slices):
         print(nums[slice_start:slice_end], end=" ")
 
 
+class DielectricMaterial():
+    """
+    A dielectic material description
+    """
+
+    def scatter(self, ior, reflect_threshold, in_direction, hit_point, hit_normal, is_backface):
+        """
+        Scatter (or absorb) the incoming ray.
+
+        Args:
+            in_ray (Ray): The ray that hit the surface.
+            hit_record (HitRecord): Details about the hit between the
+                ray and the surface.
+
+        Returns:
+            (tuple): tuple containing:
+                absorbed (bool): Whether the ray was absorbed or not.
+                surface_colour (numpy.array): RGB 0-1 array representing
+                    the colour of the surface at the hit point
+                scattered_ray (Ray): The ray that bounced off the
+                    surface.
+        """
+
+        absorbed = False
+        colour = numpy.array([1.0, 1.0, 1.0])
+
+        refraction_ratio = ior
+        if not is_backface:
+            refraction_ratio = 1/ior
+
+        cos_theta = min(-in_direction.dot(hit_normal), 1.0)
+        sin_theta = numpy.sqrt(1.0 - cos_theta**2)
+        cannot_refract = refraction_ratio * sin_theta > 1.0
+
+        reflectance = self.reflectance(cos_theta, refraction_ratio)
+        reflectance_too_high = reflectance > reflect_threshold
+
+        if cannot_refract or reflectance_too_high:
+            refracted_dir = self.reflect(in_direction, hit_normal)
+        else:
+            refracted_dir = self.refract(
+                in_direction, hit_normal, refraction_ratio
+            )
+
+        return hit_point, refracted_dir
+
+    def refract(self, in_direction, normal, etai_over_etat):
+        """
+        Calculate the refracted ray.
+
+        I have almost no idea what's going on in here :(. Stolen from
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+
+        Args:
+            in_direction (numpy.array): The direction of the incoming
+                ray (needs to be unit length)
+            normal (numpy.array): The normal of the surface at the hit
+                point.
+            etai_over_etat (float): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them.
+        Returns:
+            numpy.array: The direction of the refracted ray
+        """
+
+        cos_theta = min(-in_direction.dot(normal), 1.0)
+        r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
+        r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
+        r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
+        return r_out_perp + r_out_parallel
+
+    def reflectance(self, cosine, ref_idx):
+        """
+        Calculate the reflectance using Schlick's approximation.
+
+        I have no idea whats going on in here. Stolen from:
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/schlickapproximation
+
+        Args:
+            cosine (float): Cosine of ... some angle :(
+            ref_idx (float): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them.
+        Returns:
+            float: A reflectance angle?
+        """
+
+        r0 = (1 - ref_idx) / (1 + ref_idx)
+        r0 = r0**2
+        return r0 + (1 - r0) * (1 - cosine)**5
+
+    def reflect(self, in_direction, surface_normal):
+        """
+        Reflect a ray off a surface facing a given direction.
+
+        Args:
+            in_direction (numpy.array): The direction of the incoming ray (
+                must be normalised)
+
+        The following pieces make up the system in which the reflected
+        ray is calcluated:
+         * A hit point P.
+         * An incoming unit length vector V - the incoming ray
+           that has hit the surface.
+         * A unit length normal N which is the normal at the hit point.
+         * An offset vector B, which is V projected onto N, then
+           reversed (so it points in the direction of the normal).
+         * The reflected vector R.
+
+        We can consider R = V + 2B by thinking of the incoming vector, V
+        starting at P, continuing into the surface, then moving "out" by
+        B twice to come back out of the surface.
+
+        As X.Y is the length of X projected onto Y (if Y is unit length)
+        we can find B by calculating V.N, multiplying N by the result,
+        then multiply again -1 to reverse it.
+        """
+        return (
+            in_direction
+            - (2 * in_direction.dot(surface_normal)) * surface_normal
+        )
+
+
+def numpy_dielectric_material(ior, reflect_threshold, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    """
+
+    """
+    # ior = 1.5
+
+    colour = numpy.array([1.0, 1.0, 1.0])
+
+    refraction_ratios = numpy.full(hit_raydirs.shape[0], ior, dtype=numpy.single)
+    frontfaces = numpy.logical_not(hit_backfaces)
+    refraction_ratios = numpy.where(frontfaces, 1.0/refraction_ratios, refraction_ratios)
+
+    cos_thetas = numpy.minimum(
+        numpy.einsum("ij,ij->i", (-1.0 * hit_raydirs), hit_normals),
+        1.0
+    )
+    sin_thetas = numpy.sqrt(1.0 - cos_thetas ** 2)
+    cannot_refract = (refraction_ratios * sin_thetas) > 1.0
+
+    reflectances = numpy_reflectance(cos_thetas, refraction_ratios)
+    reflectance_too_high = reflectances > reflect_threshold # RNG.uniform(low=0.0, high=1.0, size=(hit_raydirs.shape[0]))
+
+    to_reflect = numpy.logical_or(cannot_refract, reflectance_too_high)
+    to_refract = numpy.logical_not(to_reflect)
+
+    scattered_dirs = numpy.full((hit_raydirs.shape[0], 3), 0.0, dtype=numpy.single)
+    scattered_dirs[to_reflect] = numpy_reflect(hit_raydirs[to_reflect], hit_normals[to_reflect])
+
+    scattered_dirs[to_refract] = numpy_refract(
+        hit_raydirs[to_refract],
+        hit_normals[to_refract],
+        refraction_ratios[to_refract]
+    )
+
+    # scattered_dirs = numpy_refract(
+    #     hit_raydirs,
+    #     hit_normals,
+    #     refraction_ratios
+    # )
+
+    # Normalise
+    # scattered_dirs /= numpy.sqrt(numpy.einsum("ij,ij->i", scattered_dirs, scattered_dirs))[..., numpy.newaxis]
+
+    # scattered_dirs = numpy_reflect(hit_raydirs, hit_normals)
+
+    hit_cols = numpy.full((hit_points.shape[0], 3), 1.0, dtype=numpy.single)
+    absorbtions = numpy.full((hit_points.shape[0]), False)
+
+    return hit_points, scattered_dirs, hit_cols, absorbtions
+
+
+def numpy_reflectance(cosines, ref_idxs):
+    """
+    Calculate the reflectance using Schlick's approximation.
+
+    I have no idea whats going on in here. Stolen from:
+    https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/schlickapproximation
+
+    Args:
+        cosines (numpy.ndarray): Cosine of ... some angle :(. 1D array
+            of floats.
+        ref_idxs (numpy.ndarray): A way of describing the refractive
+            indecies of the materials on either side of the boundary
+            between them. 1D array of floats
+    Returns:
+        numpy.ndarray: A reflectance angle? 1D array of floads
+    """
+
+    r0 = (1.0 - ref_idxs) / (1.0 + ref_idxs)
+    r0 = r0 ** 2
+    return r0 + ((1.0 - r0) * ((1.0 - cosines) ** 5))
+
+
+def numpy_refract(in_directions, normals, etai_over_etats):
+        """
+        Calculate the refracted ray.
+
+        I have almost no idea what's going on in here :(. Stolen from
+        https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+
+        Args:
+            in_directions (numpy.ndarray): The direction of the incoming
+                ray (needs to be unit length). Array of floats, shape
+                (n,3).
+            normals (numpy.ndarray): The normal of the surface at the hit
+                point. Array of floats, shape (n,3).
+            etai_over_etats (numpy.ndarray): A way of describing the refractive
+                indecies of the materials on either side of the boundary
+                between them. 1D array of floats.
+        Returns:
+            numpy.ndarray: The direction of the refracted ray
+        """
+
+        cos_thetas = numpy.minimum(
+            numpy.einsum("ij,ij->i", (-1.0 * in_directions), normals),
+            1.0
+        )
+        r_out_perps = etai_over_etats[..., numpy.newaxis] * (in_directions + (cos_thetas[..., numpy.newaxis] * normals))
+        r_out_perps_len_squareds = numpy.einsum("ij,ij->i", r_out_perps, r_out_perps)
+        r_out_parallels = (-1.0 * numpy.sqrt(numpy.abs(1.0 - r_out_perps_len_squareds)))[..., numpy.newaxis] * normals
+        return r_out_perps + r_out_parallels
+
+
+        # cos_theta = min(-in_direction.dot(normal), 1.0)
+        # r_out_perp = etai_over_etat * (in_direction + cos_theta * normal)
+        # r_out_perp_len_squared = r_out_perp.dot(r_out_perp)
+        # r_out_parallel = -numpy.sqrt(abs(1.0 - r_out_perp_len_squared)) * normal
+        # return r_out_perp + r_out_parallel
+
+
+def numpy_reflect(ray_dirs, surface_normals):
+    """
+    Find the direction of reflection for a ray hitting a surface with a
+    given normal.
+    """
+    return ray_dirs - (surface_normals * 2.0 * numpy.einsum("ij,ij->i", ray_dirs, surface_normals)[..., numpy.newaxis])
+
+
+def dielectric_comparison():
+    ray_origins = []
+    for y in range(-2, 3):
+        for x in range(-2, 3):
+            ray_origins.append([x, y, 0])
+
+    ray_dirs = materials.numpy_random_unit_vecs(25)
+
+    # ray_dirs = []
+    # for i in range(25):
+    #     ray_dirs.append([0, 0, -1])
+
+    sphere_ray_group = sphere_group_ray_group.SphereGroupRayGroup()
+
+    # At origin, radius 3
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 0, 0], dtype=numpy.single),
+        3.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    sphere_grp = sphere_group.SphereGroup()
+    sphere_grp.add_sphere(
+        numpy.array([0, 0, 0], dtype=numpy.single),
+        3.0,
+        None
+    )
+
+    single_sphere = sphere.Sphere(
+        numpy.array([0, 0, 0], dtype=numpy.single),
+        3.0,
+        None
+    )
+
+    dielectric_mat = DielectricMaterial()
+
+    t_min = 0.0001
+    t_max = 5000.0
+
+    numpy_ray_origins = numpy.array(ray_origins, dtype=numpy.single)
+    numpy_ray_dirs = numpy.array(ray_dirs, dtype=numpy.single)
+    (
+        ray_hits,
+        hit_ts,
+        hit_pts,
+        hit_normals,
+        hit_material_indecies,
+        back_facings
+    ) = sphere_ray_group.get_hits(
+        numpy_ray_origins,
+        numpy_ray_dirs,
+        t_min,
+        t_max
+    )
+
+    for i in range(25):
+        each_ray = ray.Ray(numpy_ray_origins[i], numpy_ray_dirs[i])
+        single_hit, single_hit_record = single_sphere.hit_test(
+            each_ray, t_min, t_max
+        )
+
+        group_hit, group_hit_record = sphere_grp.hit_test(
+            each_ray, t_min, t_max  
+        )
+
+
+        print(f"Ray origin: {numpy_ray_origins[i]}")
+        print(f"Ray dir: {numpy_ray_dirs[i]}")
+
+        print("Hit point")
+        print(f"Single: {single_hit_record.hit_point}")
+        print(f" Group: {group_hit_record.hit_point}")
+        print(f"raygrp: {hit_pts[i]}")
+        print("")
+
+        print("Hit normal")
+        print(f"Single: {single_hit_record.normal}")
+        print(f" Group: {group_hit_record.normal}")
+        print(f"raygrp: {hit_normals[i]}")
+        print("")
+
+        print("Hit t")
+        print(f"Single: {single_hit_record.t}")
+        print(f" Group: {group_hit_record.t}")
+        print(f"raygrp: {hit_ts[i]}")
+        print("")
+
+        print("Back facing")
+        if single_hit_record.side == renderable.Side.BACK:
+            single_back = True
+        else:
+            single_back = False
+        if group_hit_record.side == renderable.Side.BACK:
+            group_back = True
+        else:
+            group_back = False
+        print(f"Single: {single_back}")
+        print(f" Group: {group_back}")
+        print(f"raygrp: {back_facings[i]}")
+        print("")
+
+        print("Hit")
+        print(f"Single: {single_hit}")
+        print(f" Group: {group_hit}")
+        print(f"raygrp: {ray_hits[i]}")
+
+
+
+
+        print("\n---\n")
+
+
+
+
+
+
+
+
+
+    # ior = 1.5
+    # refectance_threshold = 0.1
+
+    # (
+    #     scatter_origins,
+    #     scatter_dirs,
+    #     hit_cols,
+    #     absorbtions
+    # ) = numpy_dielectric_material(
+    #     ior,
+    #     refectance_threshold,
+    #     numpy_ray_dirs,
+    #     hit_pts,
+    #     hit_normals,
+    #     back_facing
+    # )
+
+
+    # for i in range(25):
+    #     scatter_origin, scatter_dir = dielectric_mat.scatter(
+    #         ior,
+    #         refectance_threshold,
+    #         numpy_ray_dirs[i],
+    #         hit_pts[i],
+    #         hit_normals[i],
+    #         back_facing[i]
+    #     )
+    #     print(scatter_dir)
+    #     print(scatter_dirs[i])
+    #     print("-")
+
+
+
+
+
+
+
+
+
 # for i in range(4,20):
 #     test_array_slice(i,4)
 #     print("")
@@ -1348,6 +1757,7 @@ def test_array_slice(length, num_slices):
 
 
 main.main()
+# dielectric_comparison()
 # numpy_bounce_prod_test()
 # test_sky_col()
 # masked_assign_test()
