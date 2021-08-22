@@ -70,13 +70,17 @@ class SphereGroupRayGroup():
         # R1|C20.C20 - S0.r^2   C20.C20 - S1.r^2   C20.C20 - S2.r^2
         Cs = numpy.einsum("...ij,...ij->...i", C_to_Os, C_to_Os) - self.radii**2
 
+        # Free some memory
+        del C_to_Os
+
+
         # This is a grid of scalars num_rays by num_spheres in size.
         # To avoid nans from negative discriminants, use the max value
         # between the orig disc, and a small +ve num.
         discriminants = numpy.square(Hs) - Cs
-        # This saves some memory
-        del Cs
 
+        # Free some memory
+        del Cs
 
         # Also a grid of scalars num_rays by num_spheres in size.
         # For each ray (row) it lists (column) the value of t where that
@@ -86,6 +90,9 @@ class SphereGroupRayGroup():
         smaller_ts[mask] = -Hs[mask] - numpy.sqrt(discriminants[mask])
         larger_ts = numpy.full_like(discriminants, t_max + 1.0)
         larger_ts[mask] = -Hs[mask] + numpy.sqrt(discriminants[mask])
+
+        # Free somememory
+        del Hs
 
         # If the value is less than t_min, set it to a value thats too big
         smaller_ts[smaller_ts < t_min] = t_max + 1
@@ -97,19 +104,6 @@ class SphereGroupRayGroup():
         # This saves some memory
         del smaller_ts
         del larger_ts
-
-        # # This takes the smaller of the two, as long as it's positive
-        # all_ts = numpy.where(
-        #     (smaller_ts > 0.0) & (smaller_ts < larger_ts),
-        #     smaller_ts,
-        #     larger_ts
-        # )
-        # # This saves some memory
-        # del smaller_ts
-        # del larger_ts
-        # # Here we filter out any discriminants that were less than 0
-        # t_filter = (discriminants > 0.00001) & (all_ts > t_min) & (all_ts < t_max)
-        # final_ts = numpy.where(t_filter, all_ts, t_max + 1.0)
 
         # A 1D array num_rays long that contains the index of the
         # sphere with the smallest t

@@ -1743,7 +1743,16 @@ def dielectric_comparison():
     #     print("-")
 
 
-
+def einsum_test():
+    a = numpy.array([1, 2, 3])
+    bs = numpy.array([
+        [1, 1, 1],
+        [2, 2, 2],
+        [3, 3, 3],
+        [0, 4, -2]
+    ])
+    dots = numpy.einsum("j,ij->i", a, bs)
+    print(dots)
 
 
 
@@ -1757,6 +1766,7 @@ def dielectric_comparison():
 
 
 main.main()
+# einsum_test()
 # dielectric_comparison()
 # numpy_bounce_prod_test()
 # test_sky_col()

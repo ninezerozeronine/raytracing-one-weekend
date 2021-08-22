@@ -14,22 +14,22 @@ from . import renderable
 RNG = numpy.random.default_rng()
 AXIS_COLOUR_PAIRS = [
     # +X : Red
-    (numpy.array([1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 0.0])),
+    (numpy.array([1.0, 0.0, 0.0], dtype=numpy.single), numpy.array([1.0, 0.0, 0.0], dtype=numpy.single)),
 
     # +Y : Green
-    (numpy.array([0.0, 1.0, 0.0]), numpy.array([0.0, 1.0, 0.0])),
+    (numpy.array([0.0, 1.0, 0.0], dtype=numpy.single), numpy.array([0.0, 1.0, 0.0], dtype=numpy.single)),
 
     # +Z : Blue
-    (numpy.array([0.0, 0.0, 1.0]), numpy.array([0.0, 0.0, 1.0])),
+    (numpy.array([0.0, 0.0, 1.0]), numpy.array([0.0, 0.0, 1.0], dtype=numpy.single)),
 
     # -X : Pink
-    (numpy.array([-1.0, 0.0, 0.0]), numpy.array([1.0, 0.0, 1.0])),
+    (numpy.array([-1.0, 0.0, 0.0], dtype=numpy.single), numpy.array([1.0, 0.0, 1.0], dtype=numpy.single)),
 
     # -Y : Yellow
-    (numpy.array([0.0, -1.0, 0.0]), numpy.array([1.0, 1.0, 0.0])),
+    (numpy.array([0.0, -1.0, 0.0], dtype=numpy.single), numpy.array([1.0, 1.0, 0.0], dtype=numpy.single)),
 
     # -Z : Cyan
-    (numpy.array([0.0, 0.0, -1.0]), numpy.array([0.0, 1.0, 1.0])),
+    (numpy.array([0.0, 0.0, -1.0], dtype=numpy.single), numpy.array([0.0, 1.0, 1.0], dtype=numpy.single)),
 ]
 
 
@@ -435,6 +435,33 @@ class NormalToDiscreteRGBMaterial():
             ret_colour,
             scattered_ray,
         )
+
+
+class NumpyNormalToDiscreteRGBMaterial():
+    """
+    Colour the surface based on the discretised world normal at that
+    point.
+    """
+
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+
+        # Generate points in unit hemispheres pointing in the normal direction
+        ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
+
+        # Reverse any points in the wrong hemisphere
+        cosine_angles = numpy.einsum("ij,ij->i", ray_dirs, hit_normals)
+        facing_wrong_way = cosine_angles < 0.0
+        ray_dirs[facing_wrong_way] *= -1.0
+
+
+        hit_cols = numpy.full((hit_points.shape[0], 3), [0.4, 0.4, 0.4], dtype=numpy.single)
+        for axis, colour in AXIS_COLOUR_PAIRS:
+            cos_angles = numpy.einsum("j,ij->i", axis, hit_normals)
+            hit_cols[cos_angles > 0.8] = colour
+
+        absorbtions = numpy.full((hit_points.shape[0]), False)
+
+        return hit_points, ray_dirs, hit_cols, absorbtions
 
 
 class MetalMaterial():

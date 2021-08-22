@@ -26,8 +26,8 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 20
-MAX_BOUNCES = 4
+PIXEL_SAMPLES = 100
+MAX_BOUNCES = 10
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
@@ -319,126 +319,9 @@ def numpy_render():
 
 
 def numpy_bounce_render():
-    # # Cam setup
-    # cam_pos = numpy.array([5.0, 2.0, 10.0])
-    # cam_lookat = numpy.array([0.0, 1.0, 0.0])
-    # pos_to_lookat = cam_lookat - cam_pos
-    # focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
-    # aperture = 0.5
-    # horizontal_fov = 60.0
-    # camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
 
-    # # Sphere setup
-    # sphere_ray_group = SphereGroupRayGroup()
-
-    # # Red
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([-5, 2, 0], dtype=numpy.single),
-    #     2.0,
-    #     numpy.array([1,0,0], dtype=numpy.single),
-    # )
-
-    # # Green
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([0, 2, 0], dtype=numpy.single),
-    #     2.0,
-    #     numpy.array([0,1,0], dtype=numpy.single),
-    # )
-
-    # # Blue
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([5, 2, 0], dtype=numpy.single),
-    #     2.0,
-    #     numpy.array([0,0,1], dtype=numpy.single),
-    # )
-
-    # # Ground
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([0, -1000, 0],  dtype=numpy.single),
-    #     1000.0,
-    #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    # )
-
-
-    # # Bunch of small spheres
-    # for x in range(-10, 10):
-    #     for z in range(-10, 10):
-    #         sphere_ray_group.add_sphere(
-    #             numpy.array([x, 0.3, z], dtype=numpy.single),
-    #             0.3,
-    #             RNG.uniform(low=0.0, high=1.0, size=3)
-    #         )
-
-
-    cam_pos = numpy.array([13.0, 2.0, 3.0])
-    cam_lookat = numpy.array([0.0, 0.5, 0.0])
-    focus_dist = 10.0
-    #aperture = 0.1
-    aperture = 0.0
-    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
-
-    gray_diffuse_mat = materials.NumpyPointOnHemiSphereMaterial(
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    )
-    metal_mat = materials.NumpyMetalMaterial(
-        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
-        0.0
-    )
-    glass_mat = materials.NumpyDielectricMaterial(1.5)
-
-    material_map = {
-        0: gray_diffuse_mat,
-        1: metal_mat,
-        2: glass_mat
-    }
-
-    # Sphere setup
-    sphere_ray_group = SphereGroupRayGroup()
-
-    # Red
-    sphere_ray_group.add_sphere(
-        numpy.array([-4, 1, 0], dtype=numpy.single),
-        1.0,
-        numpy.array([1,0,0], dtype=numpy.single),
-        0
-    )
-
-    # Green
-    sphere_ray_group.add_sphere(
-        numpy.array([0, 1, 0], dtype=numpy.single),
-        1.0,
-        numpy.array([0,1,0], dtype=numpy.single),
-        0
-    )
-
-    # Metal
-    sphere_ray_group.add_sphere(
-        numpy.array([4, 1, 0], dtype=numpy.single),
-        1.0,
-        numpy.array([0.9,0.9,0.9], dtype=numpy.single),
-        2
-    )
-
-    # Ground
-    sphere_ray_group.add_sphere(
-        numpy.array([0, -1000, 0],  dtype=numpy.single),
-        1000.0,
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
-        0
-    )
-
-    # with open("sphere_data.json") as file_handle:
-    #     sphere_data = json.load(file_handle)
-
-    # print(len(sphere_data))
-    # for sphere in sphere_data:
-    #     colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    #     if sphere["material"] != "glass":
-    #         colour = numpy.array(sphere["colour"])
-    #     sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour, 0)
-
-
-
+    # camera, sphere_ray_group, material_map = numpy_dielectric_scene()
+    camera, sphere_ray_group, material_map = numpy_glass_experiment_scene()
 
     start_time = time.perf_counter()
 
@@ -1190,6 +1073,171 @@ def dielectric_debug_scene():
 
 
     return world, camera
+
+
+def numpy_dielectric_scene():
+    cam_pos = numpy.array([13.0, 2.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10.0
+    #aperture = 0.1
+    aperture = 0.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
+
+    gray_diffuse_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
+        0.0
+    )
+    glass_mat = materials.NumpyDielectricMaterial(1.5)
+    discrete_rgb_mat = materials.NumpyNormalToDiscreteRGBMaterial()
+
+    material_map = {
+        0: gray_diffuse_mat,
+        1: metal_mat,
+        2: glass_mat,
+        3: discrete_rgb_mat
+    }
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Red
+    sphere_ray_group.add_sphere(
+        numpy.array([-4, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    # Green
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([0,1,0], dtype=numpy.single),
+        3
+    )
+
+    # Metal
+    sphere_ray_group.add_sphere(
+        numpy.array([4, 1, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([0.9,0.9,0.9], dtype=numpy.single),
+        2
+    )
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0, -1000, 0], dtype=numpy.single),
+        1000.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        0
+    )
+
+    # with open("sphere_data.json") as file_handle:
+    #     sphere_data = json.load(file_handle)
+
+    # print(len(sphere_data))
+    # for sphere in sphere_data:
+    #     colour = numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    #     if sphere["material"] != "glass":
+    #         colour = numpy.array(sphere["colour"])
+    #     sphere_ray_group.add_sphere(sphere["pos"], sphere["radius"], colour, 0)
+
+
+    return camera, sphere_ray_group, material_map
+
+
+def numpy_glass_experiment_scene():
+    cam_pos = numpy.array([0,0,0], dtype=numpy.single)
+    cam_lookat = numpy.array([0.0, 0.0, -5.0], dtype=numpy.single)
+    focus_dist = 10.0
+    aperture = 0.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 90.0)
+
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([(148/256), (116/256), (105/256)], dtype=numpy.single)
+    )
+    blue_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.1, 0.2, 0.5], dtype=numpy.single)
+    )
+    discrete_normal_mat = materials.NumpyNormalToDiscreteRGBMaterial()
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.8, 0.8, 0.8], dtype=numpy.single),
+        0.0
+    )
+    glass_mat = materials.NumpyDielectricMaterial(1.5)
+
+    material_map = {
+        0: ground_mat,
+        1: blue_mat,
+        2: discrete_normal_mat,
+        3: metal_mat,
+        4: glass_mat
+    }
+
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Line of shperes left to right
+    # Glass
+    sphere_ray_group.add_sphere(
+        numpy.array([-6.0, 0.0, -10.0], dtype=numpy.single),
+        3.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        4
+    )
+    # Blue
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, 0.0, -10.0], dtype=numpy.single),
+        3.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        1
+    )
+    # Discrete Normal
+    sphere_ray_group.add_sphere(
+        numpy.array([6.0, 0.0, -10.0], dtype=numpy.single),
+        3.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        2
+    )
+
+    # Floating sphere above and to the right of the left/right line.
+    sphere_ray_group.add_sphere(
+        numpy.array([5.0, 6.0, -16.0], dtype=numpy.single),
+        3.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        3
+    )
+
+    # Sphere embedded in the ground behind the glass sphere
+    sphere_ray_group.add_sphere(
+        numpy.array([-9.0, -3.0, -16.0], dtype=numpy.single),
+        3.0,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        2
+    )
+
+
+    for x in range(3):
+        for y in range(3):
+            sphere_ray_group.add_sphere(
+                numpy.array([(x*1.3)-12.0, (y*2.0)+1.5, -16.0], dtype=numpy.single),
+                0.3,
+                numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+                2
+            )
+
+    # Ground Sphere
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -503.0, -10.0], dtype=numpy.single),
+        500,
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single),
+        0
+    )
+
+    return camera, sphere_ray_group, material_map
 
 
 def get_ray_colour(ray, world, depth):
