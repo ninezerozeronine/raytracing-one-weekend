@@ -377,11 +377,19 @@ def numpy_bounce_render():
     aperture = 0.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
 
+    gray_diffuse_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
+        0.0
+    )
+    glass_mat = materials.NumpyDielectricMaterial(1.5)
 
     material_map = {
-        0: materials.numpy_point_on_hemisphere_material,
-        1: materials.numpy_metal_material,
-        2: materials.numpy_dielectric_material
+        0: gray_diffuse_mat,
+        1: metal_mat,
+        2: glass_mat
     }
 
     # Sphere setup
@@ -502,7 +510,7 @@ def numpy_bounce_render():
             for material_index, material in material_map.items():
                 material_matches = sphere_hit_material_indecies == material_index
 
-                scatter_ray_origins, scatter_ray_dirs, scatter_cols, scatter_absorbtions = material(
+                scatter_ray_origins, scatter_ray_dirs, scatter_cols, scatter_absorbtions = material.scatter(
                     ray_directions[active_ray_indecies[material_matches]],
                     sphere_hit_pts[material_matches],
                     sphere_hit_normals[material_matches],
