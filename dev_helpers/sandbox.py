@@ -1755,8 +1755,137 @@ def einsum_test():
     print(dots)
 
 
+def mttriangle_ray_group_test():
+    ray_dirs = numpy.array([
+        [1,2,3],
+        [4,5,6],
+        [0,0,0]
+    ])
+    ray_origins = numpy.array([
+        [0,0,0],
+        [7,8,9],
+        [-1,4,2]
+    ])
+    pt0s = numpy.array([
+        [5,1,4],
+        [1,3,4],
+        [1,9,1],
+        [7,0,9],
+        [-1,-3,-5]
+    ])
+    As = numpy.array([
+        [1,1,3],
+        [5,7,3],
+        [2,4,1],
+        [1,2,3],
+        [-2,-5,0]
+    ])
+    Bs = numpy.array([
+        [1,1,1],
+        [2,2,2],
+        [3,3,3],
+        [7,8,9],
+        [-1,3,0]
+    ])
+
+    p_vecs = numpy.cross(
+        ray_dirs[:, numpy.newaxis, :],
+        Bs[numpy.newaxis, :, :]
+    )
+
+    # print(p_vecs.shape)
+
+    # for dir_index in range(ray_dirs.shape[0]):
+    #     for B_index in range(Bs.shape[0]):
+    #         manual = numpy.cross(ray_dirs[dir_index], Bs[B_index])
+    #         print(manual)
+    #         print(p_vecs[dir_index, B_index])
+    #         print("---")
+
+    dets = numpy.einsum("ij,...ij->...i", As, p_vecs)
+    # Same result.
+    # dets = numpy.einsum("...ij,ij->...i", p_vecs, As)
+
+    # for ray_index in range(ray_dirs.shape[0]):
+    #     for tri_index in range(As.shape[0]):
+    #         manual = numpy.dot(As[tri_index], p_vecs[ray_index, tri_index], )
+    #         print(f"{ray_index}, {tri_index}")
+    #         print(f"{As[tri_index]} . {p_vecs[ray_index, tri_index]}")
+    #         print(manual)
+    #         print(dets[ray_index, tri_index])
+    #         print("---")
+
+    inv_dets = dets.copy()
+    tris_parallel_to_rays = numpy.absolute(dets) < 0.00001
+    inv_dets[tris_parallel_to_rays] = 1.0
+    inv_dets = 1.0/inv_dets
 
 
+    t_vecs = ray_origins[:, numpy.newaxis] - pt0s
+    print(t_vecs.shape)
+
+    Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs)
+    # for ray_index in range(ray_dirs.shape[0]):
+    #     for tri_index in range(As.shape[0]):
+    #         manual = numpy.dot(t_vecs[ray_index, tri_index], p_vecs[ray_index, tri_index], )
+    #         print(f"{ray_index}, {tri_index}")
+    #         print(f"{t_vecs[ray_index, tri_index]} . {p_vecs[ray_index, tri_index]}")
+    #         print(manual)
+    #         print(Us[ray_index, tri_index])
+    #         print("---")
+
+    # 2D grid of vecs
+    q_vecs = numpy.cross(
+        t_vecs,
+        As[numpy.newaxis,:]
+    )
+    # for ray_index in range(ray_dirs.shape[0]):
+    #     for tri_index in range(As.shape[0]):
+    #         manual = numpy.cross(t_vecs[ray_index, tri_index], As[tri_index], )
+    #         print(f"{ray_index}, {tri_index}")
+    #         print(f"{t_vecs[ray_index, tri_index]} . {As[tri_index]}")
+    #         print(manual)
+    #         print(q_vecs[ray_index, tri_index])
+    #         print("---")
+
+
+
+    # 2D grid of scalars num rays by num tris
+    Vs = numpy.einsum("...j,...ij->...i", ray_dirs, q_vecs) * inv_dets
+    # for ray_index in range(ray_dirs.shape[0]):
+    #     for tri_index in range(As.shape[0]):
+    #         ray_dir = ray_dirs[ray_index]
+    #         q_vec = q_vecs[ray_index, tri_index]
+    #         inv_det = inv_dets[ray_index, tri_index]
+    #         manual = numpy.dot(ray_dir, q_vec) * inv_det
+    #         print(f"{ray_index}, {tri_index}")
+    #         print(f"{ray_dir} . {q_vec}")
+    #         print(manual)
+    #         print(Vs[ray_index, tri_index])
+    #         print("---")
+
+
+    Ts = numpy.einsum("ij,...ij->...i", Bs, q_vecs) * inv_dets
+    # for ray_index in range(ray_dirs.shape[0]):
+    #     for tri_index in range(As.shape[0]):
+    #         B = Bs[tri_index]
+    #         q_vec = q_vecs[ray_index, tri_index]
+    #         inv_det = inv_dets[ray_index, tri_index]
+    #         manual = numpy.dot(B, q_vec) * inv_det
+    #         print(f"{ray_index}, {tri_index}")
+    #         print(f"{B} . {q_vec}")
+    #         print(manual)
+    #         print(Ts[ray_index, tri_index])
+    #         print("---")
+
+    test_Ts = numpy.array([
+        [7,7,7],
+        [1,4,5],
+        [1,4,9],
+        [9,6,8],
+        [9,9,1],
+    ])
+    print(numpy.any(numpy.less(test_Ts, 5), axis=1))
 
 
 # for i in range(4,20):
@@ -1766,6 +1895,8 @@ def einsum_test():
 
 
 main.main()
+# cross_grid_test()
+# mttriangle_ray_group_test()
 # einsum_test()
 # dielectric_comparison()
 # numpy_bounce_prod_test()

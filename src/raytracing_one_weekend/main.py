@@ -18,6 +18,7 @@ from .sphere_group import SphereGroup
 from .sphere_group_ray_group import SphereGroupRayGroup
 from .mttriangle import MTTriangle
 from .mttriangle_group import MTTriangleGroup
+from .mttriangle_group_ray_group import MTTriangleGroupRayGroup
 from .obj_tri_mesh import OBJTriMesh
 from .camera import Camera
 from . import materials
@@ -26,8 +27,8 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 100
-MAX_BOUNCES = 10
+PIXEL_SAMPLES = 50
+MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
@@ -89,7 +90,9 @@ def render():
     Do the rendering of the image.
     """
 
-    world, camera = dielectric_debug_scene()
+    # world, camera = dielectric_debug_scene()
+    world, camera = non_numpy_triangle_noise_cmp_scene()
+    # world, camera = bunny_scene()
 
     img_data = {}
     pixel_coords = (
@@ -320,8 +323,11 @@ def numpy_render():
 
 def numpy_bounce_render():
 
-    # camera, sphere_ray_group, material_map = numpy_dielectric_scene()
-    camera, sphere_ray_group, material_map = numpy_glass_experiment_scene()
+    # camera, object_group, material_map = numpy_dielectric_scene()
+    # camera, object_group, material_map = numpy_glass_experiment_scene()
+    # camera, object_group, material_map = numpy_triangles_scene()
+    # camera, object_group, material_map = numpy_simple_sphere_scene()
+    camera, object_group, material_map = ray_group_triangle_group_bunny_scene()
 
     start_time = time.perf_counter()
 
@@ -345,7 +351,7 @@ def numpy_bounce_render():
 
         if bounce != MAX_BOUNCES:
 
-            num_chunks = 30
+            num_chunks = 60
             ray_origins_chunks = numpy.array_split(ray_origins[active_ray_indecies], num_chunks)
             ray_directions_chunks = numpy.array_split(ray_directions[active_ray_indecies], num_chunks)
             print(f"Chunk 1 of {num_chunks}")
@@ -353,57 +359,64 @@ def numpy_bounce_render():
             # Also need to catch the case where there are no hits.
             (
                 ray_hits,
-                sphere_hit_ts,
-                sphere_hit_pts,
-                sphere_hit_normals,
-                sphere_hit_material_indecies,
+                hit_ts,
+                hit_pts,
+                hit_normals,
+                hit_material_indecies,
                 back_facing
-            ) = sphere_ray_group.get_hits(
+            ) = object_group.get_hits(
                 ray_origins_chunks[0],
                 ray_directions_chunks[0],
-                0.00001,
+                0.0001,
                 5000.0
             )
             for chunk_index in range(1,num_chunks):
                 print(f"Chunk {chunk_index+1} of {num_chunks}")
                 (
                     ray_hits_chunk,
-                    sphere_hit_ts_chunk,
-                    sphere_hit_pts_chunk,
-                    sphere_hit_normals_chunk,
-                    sphere_hit_material_indecies_chunk,
+                    hit_ts_chunk,
+                    hit_pts_chunk,
+                    hit_normals_chunk,
+                    hit_material_indecies_chunk,
                     back_facing_chunk
-                ) = sphere_ray_group.get_hits(
+                ) = object_group.get_hits(
                     ray_origins_chunks[chunk_index],
                     ray_directions_chunks[chunk_index],
-                    0.00001,
+                    0.0001,
                     5000.0
                 )
                 ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
-                sphere_hit_ts = numpy.concatenate((sphere_hit_ts, sphere_hit_ts_chunk), axis=0)
-                sphere_hit_pts = numpy.concatenate((sphere_hit_pts, sphere_hit_pts_chunk), axis=0)
-                sphere_hit_normals = numpy.concatenate((sphere_hit_normals, sphere_hit_normals_chunk), axis=0)
-                sphere_hit_material_indecies = numpy.concatenate((sphere_hit_material_indecies, sphere_hit_material_indecies_chunk), axis=0)
+                hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
+                hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
+                hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+                hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
                 back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
 
+            # print(ray_hits.shape[0])
+            # print(hit_ts.shape[0])
+            # print(hit_pts.shape[0])
+            # print(hit_normals.shape[0])
+            # print(hit_material_indecies.shape[0])
+            # print(back_facing.shape[0])
+            # print(numpy.any(ray_hits))
             ray_misses = numpy.logical_not(ray_hits)
 
             material_absorbsions = numpy.full((ray_hits.shape[0]), False)
 
             for material_index, material in material_map.items():
-                material_matches = sphere_hit_material_indecies == material_index
+                material_matches = (hit_material_indecies == material_index) & ray_hits
 
                 scatter_ray_origins, scatter_ray_dirs, scatter_cols, scatter_absorbtions = material.scatter(
                     ray_directions[active_ray_indecies[material_matches]],
-                    sphere_hit_pts[material_matches],
-                    sphere_hit_normals[material_matches],
+                    hit_pts[material_matches],
+                    hit_normals[material_matches],
                     back_facing[material_matches]
                 )
 
-                material_absorbsions[material_matches] = scatter_absorbtions
                 ray_origins[active_ray_indecies[material_matches]] = scatter_ray_origins
                 ray_directions[active_ray_indecies[material_matches]] = scatter_ray_dirs
                 ray_colours[active_ray_indecies[material_matches], bounce] = scatter_cols
+                material_absorbsions[material_matches] = scatter_absorbtions
 
             ts = (ray_directions[active_ray_indecies[ray_misses], 1] + 1.0) * 0.5
             ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
@@ -1238,6 +1251,212 @@ def numpy_glass_experiment_scene():
     )
 
     return camera, sphere_ray_group, material_map
+
+
+def numpy_triangles_scene():
+    cam_pos = numpy.array([0.0, 1.0, 6.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    material_map = {
+        0: ground_mat,
+    }
+
+    tri_grp = MTTriangleGroupRayGroup(0)
+
+    # Blue triangle
+    tri_grp.add_triangle(
+        numpy.array([1.0, 0.0, 0.0], dtype=numpy.single),
+        numpy.array([2.0, 0.0, 0.0], dtype=numpy.single),
+        numpy.array([1.0, 2.0, 0.0], dtype=numpy.single),
+    )
+
+    # Green triangle
+    tri_grp.add_triangle(
+        numpy.array([-2.5, 0.0, 0.0], dtype=numpy.single),
+        numpy.array([-1.5, 0.0, 0.0], dtype=numpy.single),
+        numpy.array([-2.0, 0.75, 0.0], dtype=numpy.single),
+    )
+
+    # Mirror triangle
+    offset = numpy.array([0.0, 0.0, -2.0], dtype=numpy.single)
+    tri_grp.add_triangle(
+        numpy.array([-2.0, 0.0, -1.0], dtype=numpy.single) + offset,
+        numpy.array([2.0, 0.0, 1.0], dtype=numpy.single) + offset,
+        numpy.array([0.0, 2.0, 0.0], dtype=numpy.single) + offset,
+    )
+
+    # Ground triangle
+    tri_grp.add_triangle(
+        numpy.array([-200, 0, 200], dtype=numpy.single),
+        numpy.array([200, 0, 200], dtype=numpy.single),
+        numpy.array([0, 0, -200], dtype=numpy.single),
+    )
+
+    return camera, tri_grp, material_map
+
+
+def numpy_simple_sphere_scene():
+    cam_pos = numpy.array([0.0, 1.0, 6.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    material_map = {
+        0: ground_mat,
+    }
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    # Brown
+    sphere_ray_group.add_sphere(
+        numpy.array([-1.0, 0.5, 0.0], dtype=numpy.single),
+        0.5,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    # Red
+    sphere_ray_group.add_sphere(
+        numpy.array([-2.3, 0.3, -0.4], dtype=numpy.single),
+        0.3,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    return camera, sphere_ray_group, material_map
+
+
+def non_numpy_triangle_noise_cmp_scene():
+    cam_pos = numpy.array([0.0, 1.0, 6.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+
+    world = World()
+
+    # Blue triangle
+    world.renderables.append(MTTriangle(
+        numpy.array([1.0, 0.0, 0.0]),
+        numpy.array([2.0, 0.0, 0.0]),
+        numpy.array([1.0, 2.0, 0.0]),
+        ground_mat
+    ))
+
+    # Green triangle
+    world.renderables.append(MTTriangle(
+        numpy.array([-2.5, 0.0, 0.0]),
+        numpy.array([-1.5, 0.0, 0.0]),
+        numpy.array([-2.0, 0.75, 0.0]),
+        ground_mat
+    ))
+
+    # Mirror triangle
+    offset = numpy.array([0.0, 0.0, -2.0])
+    world.renderables.append(MTTriangle(
+        numpy.array([-2.0, 0.0, -1.0]) + offset,
+        numpy.array([2.0, 0.0, 1.0]) + offset,
+        numpy.array([0.0, 2.0, 0.0]) + offset,
+        ground_mat
+    ))
+
+    # Ground triangle
+    world.renderables.append(MTTriangle(
+        numpy.array([-200, 0, 200], dtype=numpy.single),
+        numpy.array([200, 0, 200], dtype=numpy.single),
+        numpy.array([0, 0, -200], dtype=numpy.single),
+        ground_mat
+    ))
+
+    return world, camera
+
+
+def ray_group_triangle_group_bunny_scene():
+    cam_pos = numpy.array([-2.0, 3.5, 8.0])
+    cam_lookat = numpy.array([-0.5, 1.7, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 53.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    material_map = {
+        0: ground_mat,
+    }
+
+    tri_grp = MTTriangleGroupRayGroup(0)
+
+    # Ground triangle
+    tri_grp.add_triangle(
+        numpy.array([-200, 0, 200], dtype=numpy.single),
+        numpy.array([200, 0, 200], dtype=numpy.single),
+        numpy.array([0, 0, -200], dtype=numpy.single),
+    )
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("bunny.obj")
+
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    for triangle in obj_mesh.faces:
+        tri_grp.add_triangle(
+            numpy.array([
+                obj_mesh.vertices[triangle[0][0]][0],
+                obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[0][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[1][0]][0],
+                obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[1][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[2][0]][0],
+                obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[2][0]][2],
+            ]),
+        )
+
+    return camera, tri_grp, material_map
 
 
 def get_ray_colour(ray, world, depth):
