@@ -95,10 +95,10 @@ class MTTriangleGroupRayGroup():
         Hs = numpy.einsum("ij,ij->i", ray_dirs, C_to_Os)
         Cs = numpy.einsum("ij,ij->i", C_to_Os, C_to_Os) - self.bounds_radius**2
         discriminants = Hs**2 - Cs
-        sphere_hits = discriminants > 0.0001
+        ray_hits = discriminants > 0.0001
 
 
-        # This is a 2D grid of vectors num rays by num triangles in size
+        # This is a 2D grid of vectors num sphere-hit rays by num triangles in size
         # where each element is the cross product of the dir and B
         #
         # https://stackoverflow.com/questions/49881468/efficient-way-of-computing-the-cross-products-between-two-sets-of-vectors-numpy
@@ -109,11 +109,12 @@ class MTTriangleGroupRayGroup():
         # arrays of shape (<len_dirs>, <len_bs>, 3) where dir is
         # repeated along axis 1 and <b is repeated along axis 0
         p_vecs = numpy.cross(
-            ray_dirs[sphere_hits, numpy.newaxis, :],
+            ray_dirs[ray_hits, numpy.newaxis, :],
             self.Bs[numpy.newaxis, :, :]
         )
+        print(f"p_vecs.shape: {p_vecs.shape}")
 
-        # This is a grid of scalars num rays by num triangles.
+        # This is a grid of scalars num sphere-hit rays by num triangles.
         # Each element is the dot product of:
         # - The pvec for that row (ray) and column (triangle)
         # - The A for that column (triangle) 
@@ -126,82 +127,94 @@ class MTTriangleGroupRayGroup():
         inv_dets[tris_parallel_to_rays] = 1.0 
         inv_dets = 1.0/inv_dets
 
-        # This is a 2D grid of vectors num rays by num triangles in size
+        # This is a 2D grid of vectors num sphere-hit rays by num triangles in size
         # where each element is the origin for the ray in each row minus
         # the pt0 for the triangle in each column 
-        t_vecs = ray_origins[sphere_hits, numpy.newaxis] - self.pt0s
+        t_vecs = ray_origins[ray_hits, numpy.newaxis] - self.pt0s
 
-        # A 2D gris of scalars num rays by num tris. Each element is the
+        # A 2D gris of scalars num sphere-hit rays by num tris. Each element is the
         # dot product of the vectors in the corresponding position of
-        # the input arrays
+        # the input arrays multiplied by the inverse det in the corresponding position
         Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
 
         # Free some memory
         del p_vecs
 
-        # A 2D grid of vectors num rays by num tris. Each element is
+        miss_by_Us = (Us > 1.0) | (Us < 0.0)
+        hit_by_Us = numpy.logical_not(numpy.all(miss_by_Us, axis=1))
+        ray_hits[ray_hits] = hit_by_Us
+
+        # A 2D grid of vectors num sphere-hit rays by num tris. Each element is
         # the cross product of the elemnt from the corresponding
         # position of the t_vec array, crossed with the A of the
         # triangle for the column
         q_vecs = numpy.cross(
-            t_vecs,
+            t_vecs[hit_by_Us, :],
             self.As[numpy.newaxis, :]
         )
+        print(f"q_vecs.shape: {q_vecs.shape}")
 
         # Free some memory
         del t_vecs
 
-        # A 2D grid of scalars num rays by num tris. Each element is
+        # A 2D grid of scalars num sphere-hit rays by num tris. Each element is
         # the dot product of:
         # - The q_vec from the corresponding position
         # - The ray dir for that row.
         # Then multiplied by the inverse determinant for the
         # corresponding position
-        Vs = numpy.einsum("...j,...ij->...i", ray_dirs[sphere_hits], q_vecs) * inv_dets
+        Vs = numpy.einsum("...j,...ij->...i", ray_dirs[ray_hits], q_vecs) * inv_dets[hit_by_Us, :]
 
-        # A 2D grid of scalars num rays by num tris. Each element is
+        miss_by_Vs = (Vs < 0.0) | ((Us[hit_by_Us, :] + Vs) > 1.0)
+        hit_by_Vs = numpy.logical_not(numpy.all(miss_by_Vs, axis=1))
+        ray_hits[ray_hits] = hit_by_Vs
+        hit_by_Us[hit_by_Us] = hit_by_Vs
+
+
+        # A 2D grid of scalars num sphere-hit rays by num tris. Each element is
         # the dot product of:
         # - The Q_vec from the corresponding position
         # - The B for the tirangle for that column
         # Then multiplied by the inverse determinant for the
         # corresponding position
-        Ts = numpy.einsum("ij,...ij->...i", self.Bs, q_vecs) * inv_dets
+        Ts = numpy.einsum("ij,...ij->...i", self.Bs, q_vecs[hit_by_Vs, :]) * inv_dets[hit_by_Us, :]
+        print(f"Ts.shape: {Ts.shape}")
 
         # Free some memory
         del q_vecs
 
-        miss_by_det = numpy.absolute(dets) < 0.00001
+        # miss_by_det = numpy.absolute(dets) < 0.00001
 
-        miss_by_Us = (Us > 1.0) | (Us < 0.0)
+        # miss_by_Us = (Us > 1.0) | (Us < 0.0)
 
-        miss_by_Vs = (Vs < 0.0) | ((Us + Vs) > 1.0)
+        # miss_by_Vs = (Vs < 0.0) | ((Us + Vs) > 1.0)
 
         miss_by_Ts = (Ts < t_min) | (Ts > t_max)
 
-        misses = miss_by_det | miss_by_Us | miss_by_Vs | miss_by_Ts
+        # misses = miss_by_det | miss_by_Us | miss_by_Vs | miss_by_Ts
 
-        Ts[misses] = t_max + 1
+        Ts[miss_by_Ts] = t_max + 1
 
         smallest_t_indecies = numpy.argmin(Ts, axis=1)
         final_ts = Ts[numpy.arange(Ts.shape[0]), smallest_t_indecies]
-        ray_hits = numpy.full(ray_origins.shape[0], False)
-        ray_hits[sphere_hits] = final_ts < t_max
+        final_hits = numpy.full(ray_origins.shape[0], False)
+        final_hits[ray_hits] = final_ts < t_max
 
         hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-        hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * final_ts[..., numpy.newaxis]
+        hit_points[ray_hits] = ray_origins[ray_hits] + ray_dirs[ray_hits] * final_ts[..., numpy.newaxis]
 
         hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-        hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
+        hit_normals[ray_hits] = self.normals[smallest_t_indecies]
 
         back_facing = numpy.full(ray_origins.shape[0], False)
-        back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
+        back_facing[ray_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
         hit_normals[back_facing] *= -1.0
 
         hit_material_ids = numpy.full((ray_origins.shape[0]), self.material_id, dtype=numpy.ubyte)
 
-        # ray_hits = numpy.full((ray_origins.shape[0]), False)
+        # final_hits = numpy.full((ray_origins.shape[0]), False)
 
-        return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
+        return final_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
 
         # ray_hits = numpy.any(numpy.less(Ts, t_max), axis=1)
 
