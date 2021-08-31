@@ -24,8 +24,8 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 50
 MAX_BOUNCES = 4
@@ -91,8 +91,8 @@ def render():
     """
 
     # world, camera = dielectric_debug_scene()
-    world, camera = non_numpy_triangle_noise_cmp_scene()
-    # world, camera = bunny_scene()
+    # world, camera = non_numpy_triangle_noise_cmp_scene()
+    world, camera = bunny_scene()
 
     img_data = {}
     pixel_coords = (
@@ -794,14 +794,14 @@ def bunny_scene():
     # Ground
     world.renderables.append(Sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat))
 
-    # Metal sphere
-    world.renderables.append(Sphere(numpy.array([-3.5, 1.0, -1.5]), 1.0, metal_mat))
+    # # Metal sphere
+    # world.renderables.append(Sphere(numpy.array([-3.5, 1.0, -1.5]), 1.0, metal_mat))
 
-    # Glass sphere
-    world.renderables.append(Sphere(numpy.array([-0.7, 3.0, 5.5]), 0.4, glass_mat))
+    # # Glass sphere
+    # world.renderables.append(Sphere(numpy.array([-0.7, 3.0, 5.5]), 0.4, glass_mat))
 
-    # Normal sphere
-    world.renderables.append(Sphere(numpy.array([-2.6, 0.4, 0.5]), 0.4, normal_mat))
+    # # Normal sphere
+    # world.renderables.append(Sphere(numpy.array([-2.6, 0.4, 0.5]), 0.4, normal_mat))
 
     tri_grp = MTTriangleGroup()
 
@@ -1426,11 +1426,11 @@ def ray_group_triangle_group_bunny_scene():
     tri_grp = MTTriangleGroupRayGroup(0)
 
     # Ground triangle
-    tri_grp.add_triangle(
-        numpy.array([-200, 0, 200], dtype=numpy.single),
-        numpy.array([200, 0, 200], dtype=numpy.single),
-        numpy.array([0, 0, -200], dtype=numpy.single),
-    )
+    # tri_grp.add_triangle(
+    #     numpy.array([-200, 0, 200], dtype=numpy.single),
+    #     numpy.array([200, 0, 200], dtype=numpy.single),
+    #     numpy.array([0, 0, -200], dtype=numpy.single),
+    # )
 
     obj_mesh = OBJTriMesh()
     obj_mesh.read("bunny.obj")
