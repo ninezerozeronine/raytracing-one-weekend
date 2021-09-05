@@ -96,6 +96,22 @@ class MTTriangleGroupRayGroup():
         Cs = numpy.einsum("ij,ij->i", C_to_Os, C_to_Os) - self.bounds_radius**2
         discriminants = Hs**2 - Cs
         sphere_hits = discriminants > 0.0001
+        num_sphere_hits = numpy.sum(sphere_hits)
+
+        print(f"Num rays: {ray_origins.shape[0]}")
+        print(f"Num sphere hits: {num_sphere_hits}")
+
+
+        if num_sphere_hits == 0:
+            final_ts = numpy.full(ray_origins.shape[0], t_max + 1)
+            ray_hits = numpy.full(ray_origins.shape[0], False)
+            hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+            hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+            back_facing = numpy.full(ray_origins.shape[0], False)
+            hit_material_ids = numpy.full((ray_origins.shape[0]), self.material_id, dtype=numpy.ubyte)
+            return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
+
+
 
 
         # This is a 2D grid of vectors num rays by num triangles in size
@@ -136,6 +152,10 @@ class MTTriangleGroupRayGroup():
         # the input arrays
         Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
 
+        triangle_misses = numpy.sum((Us > 1.0) | (Us < 0.0), axis=0) == num_sphere_hits
+        # print(f"triangle_misses: {triangle_misses}")
+        triangle_hits = numpy.logical_not(triangle_misses)
+
         # Free some memory
         del p_vecs
 
@@ -147,6 +167,11 @@ class MTTriangleGroupRayGroup():
             t_vecs,
             self.As[numpy.newaxis, :]
         )
+        # q_vecs = numpy.cross(
+        #     t_vecs[:, triangle_hits, :],
+        #     self.As[numpy.newaxis, triangle_hits]
+        # )
+        print(f"q_vecs shape: {q_vecs.shape}")
 
         # Free some memory
         del t_vecs
@@ -158,6 +183,7 @@ class MTTriangleGroupRayGroup():
         # Then multiplied by the inverse determinant for the
         # corresponding position
         Vs = numpy.einsum("...j,...ij->...i", ray_dirs[sphere_hits], q_vecs) * inv_dets
+        # Vs = numpy.einsum("...j,...ij->...i", ray_dirs[sphere_hits], q_vecs) * inv_dets[:, triangle_hits]
 
         # A 2D grid of scalars num rays by num tris. Each element is
         # the dot product of:
@@ -166,32 +192,61 @@ class MTTriangleGroupRayGroup():
         # Then multiplied by the inverse determinant for the
         # corresponding position
         Ts = numpy.einsum("ij,...ij->...i", self.Bs, q_vecs) * inv_dets
+        # Ts = numpy.einsum("ij,...ij->...i", self.Bs[triangle_hits], q_vecs) * inv_dets[:, triangle_hits]
+
 
         # Free some memory
         del q_vecs
 
         miss_by_det = numpy.absolute(dets) < 0.00001
+        # miss_by_det = numpy.absolute(dets[:, triangle_hits]) < 0.00001
+        print(f"miss_by_det shape: {miss_by_det.shape}")
+        # print(f"triangles missed per ray by det: {numpy.sum(miss_by_det, axis=1)}")
 
         miss_by_Us = (Us > 1.0) | (Us < 0.0)
+        # miss_by_Us = (Us[:, triangle_hits] > 1.0) | (Us[:, triangle_hits] < 0.0)
+        print(f"miss_by_Us shape: {miss_by_Us.shape}")
+        # print(f"triangles missed per ray by Us: {numpy.sum(miss_by_Us, axis=1)}")
+        # print(f"Rays missed per triangle by Us: {numpy.sum(miss_by_Us, axis=0)}")
 
         miss_by_Vs = (Vs < 0.0) | ((Us + Vs) > 1.0)
+        # miss_by_Vs = (Vs < 0.0) | ((Us[:, triangle_hits] + Vs) > 1.0)
+        print(f"miss_by_Vs shape: {miss_by_Vs.shape}")
+        # print(f"triangles missed per ray by Vs: {numpy.sum(miss_by_Vs, axis=1)}")
+        # print(f"Rays missed per triangle by Vs: {numpy.sum(miss_by_Vs, axis=0)}")
 
         miss_by_Ts = (Ts < t_min) | (Ts > t_max)
+        print(f"miss_by_Ts shape: {miss_by_Ts.shape}")
+        # print(f"triangles missed per ray by Ts: {numpy.sum(miss_by_Ts, axis=1)}")
 
         misses = miss_by_det | miss_by_Us | miss_by_Vs | miss_by_Ts
 
         Ts[misses] = t_max + 1
 
+        # Array sphere hits in length. The index is into the list
+        # of triangles that hit, not the overall list of triangles
         smallest_t_indecies = numpy.argmin(Ts, axis=1)
-        final_ts = Ts[numpy.arange(Ts.shape[0]), smallest_t_indecies]
+
+        # Array sphere hits in length, contains the smallest t value
+        # for that ray
+        smallest_ts = Ts[numpy.arange(Ts.shape[0]), smallest_t_indecies]
+
+        # Array num rays long
+        final_ts = numpy.full(ray_origins.shape[0], t_max + 1)
+
+        # Splice the ts from the ray hits into all the rays
+        final_ts[sphere_hits] = smallest_ts
+
+
         ray_hits = numpy.full(ray_origins.shape[0], False)
-        ray_hits[sphere_hits] = final_ts < t_max
+        ray_hits = final_ts < t_max
 
         hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-        hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * final_ts[..., numpy.newaxis]
+        hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * smallest_ts[..., numpy.newaxis]
 
         hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
         hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
+        # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
 
         back_facing = numpy.full(ray_origins.shape[0], False)
         back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0

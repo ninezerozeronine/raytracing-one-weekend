@@ -1788,10 +1788,20 @@ def mttriangle_ray_group_test():
         [-1,3,0]
     ])
 
+    active_rays = numpy.array([True, False, True])
+    active_tris = numpy.array([True, True, False, False, True])
+
+    # p_vecs = numpy.cross(
+    #     ray_dirs[:, numpy.newaxis, :],
+    #     Bs[numpy.newaxis, :, :]
+    # )
+
     p_vecs = numpy.cross(
-        ray_dirs[:, numpy.newaxis, :],
+        ray_dirs[active_rays, numpy.newaxis, :],
         Bs[numpy.newaxis, :, :]
     )
+
+
 
     # print(p_vecs.shape)
 
@@ -1821,8 +1831,9 @@ def mttriangle_ray_group_test():
     inv_dets = 1.0/inv_dets
 
 
-    t_vecs = ray_origins[:, numpy.newaxis] - pt0s
-    print(t_vecs.shape)
+    # t_vecs = ray_origins[:, numpy.newaxis] - pt0s
+    t_vecs = ray_origins[active_rays, numpy.newaxis] - pt0s
+    print(f"t_vecs shape: {t_vecs.shape}")
 
     Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs)
     # for ray_index in range(ray_dirs.shape[0]):
@@ -1835,9 +1846,13 @@ def mttriangle_ray_group_test():
     #         print("---")
 
     # 2D grid of vecs
+    # q_vecs = numpy.cross(
+    #     t_vecs,
+    #     As[numpy.newaxis, :]
+    # )
     q_vecs = numpy.cross(
-        t_vecs,
-        As[numpy.newaxis,:]
+        t_vecs[:, active_tris, :],
+        As[numpy.newaxis, active_tris]
     )
     # for ray_index in range(ray_dirs.shape[0]):
     #     for tri_index in range(As.shape[0]):
@@ -1847,11 +1862,12 @@ def mttriangle_ray_group_test():
     #         print(manual)
     #         print(q_vecs[ray_index, tri_index])
     #         print("---")
-
+    print(f"q_vecs shape: {q_vecs.shape}")
 
 
     # 2D grid of scalars num rays by num tris
-    Vs = numpy.einsum("...j,...ij->...i", ray_dirs, q_vecs) * inv_dets
+    # Vs = numpy.einsum("...j,...ij->...i", ray_dirs, q_vecs) * inv_dets
+    Vs = numpy.einsum("...j,...ij->...i", ray_dirs[active_rays], q_vecs) * inv_dets[:, active_tris]
     # for ray_index in range(ray_dirs.shape[0]):
     #     for tri_index in range(As.shape[0]):
     #         ray_dir = ray_dirs[ray_index]
@@ -1863,9 +1879,10 @@ def mttriangle_ray_group_test():
     #         print(manual)
     #         print(Vs[ray_index, tri_index])
     #         print("---")
+    print(f"Vs shape: {Vs.shape}")
 
 
-    Ts = numpy.einsum("ij,...ij->...i", Bs, q_vecs) * inv_dets
+    Ts = numpy.einsum("ij,...ij->...i", Bs[active_tris], q_vecs) * inv_dets[:, active_tris]
     # for ray_index in range(ray_dirs.shape[0]):
     #     for tri_index in range(As.shape[0]):
     #         B = Bs[tri_index]
@@ -1877,6 +1894,7 @@ def mttriangle_ray_group_test():
     #         print(manual)
     #         print(Ts[ray_index, tri_index])
     #         print("---")
+    print(f"Ts shape: {Ts.shape}")
 
     test_Ts = numpy.array([
         [7,7,7],
@@ -1888,13 +1906,228 @@ def mttriangle_ray_group_test():
     print(numpy.any(numpy.less(test_Ts, 5), axis=1))
 
 
+def numpy_random_unit_vecs(num_vecs):
+    """
+    Generate random unit length vectors
+    """
+
+    # Start by generating points in the cube that bound the unit sphere
+    vecs = RNG.uniform(low=-1.0, high=1.0, size=(num_vecs, 3))
+    vecs = vecs.astype(numpy.single)
+
+    # Would be good to optimise this so that we only check the newly
+    # regenerated points
+    while True:
+        lengths_squared = numpy.einsum("ij,ij->i", vecs, vecs)
+
+        # Catch points that lie outside the sphere or very close to the
+        # centre.
+        invalid_pts = numpy.logical_or(
+            lengths_squared > 1.0,
+            lengths_squared < 0.00001
+        )
+        num_bad_pts = numpy.count_nonzero(invalid_pts)
+        if num_bad_pts == 0:
+            break
+        new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+        new_pts = new_pts.astype(numpy.single)
+        vecs[invalid_pts] = new_pts
+
+    # Normalise all the results
+    vecs /= numpy.sqrt(numpy.einsum("ij,ij->i", vecs, vecs))[..., numpy.newaxis]
+
+    return vecs
+
+
+def mttriangle_filter_speed_test():
+    setup = dedent("""
+    import numpy
+    RNG = numpy.random.default_rng()
+
+    def numpy_random_unit_vecs(num_vecs):
+        # Start by generating points in the cube that bound the unit sphere
+        vecs = RNG.uniform(low=-1.0, high=1.0, size=(num_vecs, 3))
+        vecs = vecs.astype(numpy.single)
+
+        # Would be good to optimise this so that we only check the newly
+        # regenerated points
+        while True:
+            lengths_squared = numpy.einsum("ij,ij->i", vecs, vecs)
+
+            # Catch points that lie outside the sphere or very close to the
+            # centre.
+            invalid_pts = numpy.logical_or(
+                lengths_squared > 1.0,
+                lengths_squared < 0.00001
+            )
+            num_bad_pts = numpy.count_nonzero(invalid_pts)
+            if num_bad_pts == 0:
+                break
+            new_pts = RNG.uniform(low=-1.0, high=1.0, size=(num_bad_pts, 3))
+            new_pts = new_pts.astype(numpy.single)
+            vecs[invalid_pts] = new_pts
+
+        # Normalise all the results
+        vecs /= numpy.sqrt(numpy.einsum("ij,ij->i", vecs, vecs))[..., numpy.newaxis]
+
+        return vecs
+
+    num_rays = 10000
+    num_tris = 1000
+
+    ray_dirs = numpy_random_unit_vecs(num_rays)
+    ray_origins = RNG.uniform(low=-1.0, high=1.0, size=(num_rays, 3))
+    pt0s = RNG.uniform(low=-1.0, high=1.0, size=(num_tris, 3))
+    pt1s = RNG.uniform(low=-1.0, high=1.0, size=(num_tris, 3))
+    pt2s = RNG.uniform(low=-1.0, high=1.0, size=(num_tris, 3))
+    pt0s[:,0] += 5.0
+    pt1s[:,0] += 5.0
+    pt2s[:,0] += 5.0
+    As = pt1s - pt0s
+    Bs = pt2s - pt0s
+
+    active_rays = RNG.uniform(low=-1.0, high=1.0, size=(num_rays))
+    active_rays = active_rays > 0.0
+    
+    active_tris = RNG.uniform(low=-1.0, high=1.0, size=(num_tris))
+    active_tris = active_tris > -0.5
+    """)
+
+    no_mask = dedent("""
+    p_vecs = numpy.cross(
+        ray_dirs[:, numpy.newaxis, :],
+        Bs[numpy.newaxis, :, :]
+    )
+
+    dets = numpy.einsum("ij,...ij->...i", As, p_vecs)
+
+    inv_dets = dets.copy()
+    tris_parallel_to_rays = numpy.absolute(dets) < 0.00001
+    inv_dets[tris_parallel_to_rays] = 1.0 
+    inv_dets = 1.0/inv_dets
+    
+    t_vecs = ray_origins[:, numpy.newaxis] - pt0s
+
+    Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
+
+    del p_vecs
+
+    q_vecs = numpy.cross(
+        t_vecs,
+        As[numpy.newaxis, :]
+    )
+
+    del t_vecs
+
+    Vs = numpy.einsum("...j,...ij->...i", ray_dirs, q_vecs) * inv_dets
+
+    Ts = numpy.einsum("ij,...ij->...i", Bs, q_vecs) * inv_dets
+    """)
+
+    ray_mask = dedent("""
+    p_vecs = numpy.cross(
+        ray_dirs[active_rays, numpy.newaxis, :],
+        Bs[numpy.newaxis, :, :]
+    )
+
+    dets = numpy.einsum("ij,...ij->...i", As, p_vecs)
+
+    inv_dets = dets.copy()
+    tris_parallel_to_rays = numpy.absolute(dets) < 0.00001
+    inv_dets[tris_parallel_to_rays] = 1.0 
+    inv_dets = 1.0/inv_dets
+    
+    t_vecs = ray_origins[active_rays, numpy.newaxis] - pt0s
+
+    Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
+
+    del p_vecs
+
+    q_vecs = numpy.cross(
+        t_vecs,
+        As[numpy.newaxis, :]
+    )
+
+    del t_vecs
+
+    Vs = numpy.einsum("...j,...ij->...i", ray_dirs[active_rays], q_vecs) * inv_dets
+
+    Ts = numpy.einsum("ij,...ij->...i", Bs, q_vecs) * inv_dets
+    """)
+
+
+    ray_and_tri_mask = dedent("""
+    p_vecs = numpy.cross(
+        ray_dirs[active_rays, numpy.newaxis, :],
+        Bs[numpy.newaxis, :, :]
+    )
+
+    dets = numpy.einsum("ij,...ij->...i", As, p_vecs)
+
+    inv_dets = dets.copy()
+    tris_parallel_to_rays = numpy.absolute(dets) < 0.00001
+    inv_dets[tris_parallel_to_rays] = 1.0 
+    inv_dets = 1.0/inv_dets
+    
+    t_vecs = ray_origins[active_rays, numpy.newaxis] - pt0s
+
+    Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
+
+    del p_vecs
+
+    q_vecs = numpy.cross(
+        t_vecs[:, active_tris, :],
+        As[numpy.newaxis, active_tris]
+    )
+
+    del t_vecs
+
+    Vs = numpy.einsum("...j,...ij->...i", ray_dirs[active_rays], q_vecs) * inv_dets[:, active_tris]
+
+    Ts = numpy.einsum("ij,...ij->...i", Bs[active_tris], q_vecs) * inv_dets[:, active_tris]
+    """)
+
+    print(timeit.timeit(no_mask, setup=setup, number=1))
+    print(timeit.timeit(ray_mask, setup=setup, number=1))
+    print(timeit.timeit(ray_and_tri_mask, setup=setup, number=1))
+
+
+def index_test():
+    a = numpy.array(
+        [
+            [
+                [1,6,1], [2,5,2], [3,4,3]
+            ],
+            [
+                [4,8,4], [5,1,5], [6,7,6]
+            ],
+        ]
+    )
+    print(a.shape)
+    print(a[1,2])
+    print(a[:, [0,2]])
+
+    b = numpy.array(
+        [
+            [9,9,9], [1,1,1], [2,2,2]
+        ]
+    )
+    print(b[numpy.newaxis, [0,2]])
+    print(numpy.cross(
+        a[:, [0,2]],
+        b[numpy.newaxis, [0,2]]
+    ))
+    print(numpy.cross(a[0,0], b[0]))
+
 # for i in range(4,20):
 #     test_array_slice(i,4)
 #     print("")
 
 
 
-main.main()
+# main.main()
+mttriangle_filter_speed_test()
+# index_test()
 # cross_grid_test()
 # mttriangle_ray_group_test()
 # einsum_test()
