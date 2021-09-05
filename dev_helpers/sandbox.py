@@ -1987,10 +1987,10 @@ def mttriangle_filter_speed_test():
     Bs = pt2s - pt0s
 
     active_rays = RNG.uniform(low=-1.0, high=1.0, size=(num_rays))
-    active_rays = active_rays > 0.0
+    active_rays = active_rays > 0.7
     
     active_tris = RNG.uniform(low=-1.0, high=1.0, size=(num_tris))
-    active_tris = active_tris > -0.5
+    active_tris = active_tris > 0.7
     """)
 
     no_mask = dedent("""
@@ -2125,8 +2125,8 @@ def index_test():
 
 
 
-# main.main()
-mttriangle_filter_speed_test()
+main.main()
+# mttriangle_filter_speed_test()
 # index_test()
 # cross_grid_test()
 # mttriangle_ray_group_test()
