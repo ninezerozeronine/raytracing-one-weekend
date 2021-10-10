@@ -92,6 +92,8 @@ class MTTriangleGroupRayGroup():
         See if any of the rays hit any of the triangles
         """
 
+        num_rays = ray_origins.shape[0]
+
         # First check to see if any of the rays hit the bounding sphere
         C_to_Os = ray_origins - self.bounds_centre
         Hs = numpy.einsum("ij,ij->i", ray_dirs, C_to_Os)
@@ -100,16 +102,16 @@ class MTTriangleGroupRayGroup():
         sphere_hits = discriminants > 0.0001
         num_sphere_hits = numpy.sum(sphere_hits)
 
-        print(f"Num rays: {ray_origins.shape[0]}")
+        print(f"Num rays: {num_rays}")
         print(f"Num sphere hits: {num_sphere_hits}")
 
         if num_sphere_hits == 0:
-            final_ts = numpy.full(ray_origins.shape[0], t_max + 1)
-            ray_hits = numpy.full(ray_origins.shape[0], False)
-            hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-            hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
-            back_facing = numpy.full(ray_origins.shape[0], False)
-            hit_material_ids = numpy.full((ray_origins.shape[0]), self.material_id, dtype=numpy.ubyte)
+            final_ts = numpy.full(num_rays, t_max + 1)
+            ray_hits = numpy.full(num_rays, False)
+            hit_points = numpy.zeros((num_rays, 3), dtype=numpy.single)
+            hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
+            back_facing = numpy.full(num_rays, False)
+            hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
             return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
 
 
@@ -233,29 +235,29 @@ class MTTriangleGroupRayGroup():
         smallest_ts = Ts[numpy.arange(Ts.shape[0]), smallest_t_indecies]
 
         # Array num rays long
-        final_ts = numpy.full(ray_origins.shape[0], t_max + 1)
+        final_ts = numpy.full(num_rays, t_max + 1)
 
         # Splice the ts from the ray hits into all the rays
         final_ts[sphere_hits] = smallest_ts
 
 
-        ray_hits = numpy.full(ray_origins.shape[0], False)
+        ray_hits = numpy.full(num_rays, False)
         ray_hits = final_ts < t_max
 
-        hit_points = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+        hit_points = numpy.zeros((num_rays, 3), dtype=numpy.single)
         hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * smallest_ts[..., numpy.newaxis]
 
-        hit_normals = numpy.zeros((ray_origins.shape[0], 3), dtype=numpy.single)
+        hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
         hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
         # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
 
-        back_facing = numpy.full(ray_origins.shape[0], False)
+        back_facing = numpy.full(num_rays, False)
         back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
         hit_normals[back_facing] *= -1.0
 
-        hit_material_ids = numpy.full((ray_origins.shape[0]), self.material_id, dtype=numpy.ubyte)
+        hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
 
-        # ray_hits = numpy.full((ray_origins.shape[0]), False)
+        # ray_hits = numpy.full((num_rays), False)
 
         return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
 
