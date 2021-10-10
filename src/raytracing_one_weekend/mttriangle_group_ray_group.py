@@ -37,6 +37,7 @@ class MTTriangleGroupRayGroup():
         self.material_id = material_id
         self.bounds_centre = None
         self.bounds_radius = None
+        self.num_triangles = 0
 
     def add_triangle(self, pt0, pt1, pt2):
         """
@@ -48,7 +49,7 @@ class MTTriangleGroupRayGroup():
         normal = numpy.cross(A, B)
         normal /= numpy.linalg.norm(normal)
 
-        if self.pt0s is None:
+        if self.num_triangles == 0:
             self.pt0s = numpy.array([pt0])
             self.pt1s = numpy.array([pt1])
             self.pt2s = numpy.array([pt2])
@@ -68,6 +69,7 @@ class MTTriangleGroupRayGroup():
             self.normals = numpy.append(
                 self.normals, numpy.array([normal]), axis=0
             )
+        self.num_triangles += 1
 
         self.update_sphere_bounds()
 
@@ -100,7 +102,6 @@ class MTTriangleGroupRayGroup():
 
         print(f"Num rays: {ray_origins.shape[0]}")
         print(f"Num sphere hits: {num_sphere_hits}")
-
 
         if num_sphere_hits == 0:
             final_ts = numpy.full(ray_origins.shape[0], t_max + 1)
