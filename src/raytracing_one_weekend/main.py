@@ -399,7 +399,7 @@ def numpy_bounce_render():
                     tmp_hit_material_indecies,
                     hit_material_indecies
                 )
-                hit_back_facing = numpy.where(
+                back_facing = numpy.where(
                     condition,
                     tmp_back_facing,
                     back_facing
