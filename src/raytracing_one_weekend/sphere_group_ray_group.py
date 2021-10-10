@@ -106,8 +106,8 @@ class SphereGroupRayGroup():
             ) = self._get_hits(
                 ray_origins_chunks[chunk_index],
                 ray_dirs_chunks[chunk_index],
-                0.0001,
-                5000.0
+                t_min,
+                t_max
             )
             ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
             hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)

@@ -24,8 +24,8 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 20
 MAX_BOUNCES = 4
@@ -324,10 +324,10 @@ def numpy_render():
 def numpy_bounce_render():
 
     # camera, object_group, material_map = numpy_dielectric_scene()
-    camera, object_groups, material_map = numpy_glass_experiment_scene()
+    # camera, object_groups, material_map = numpy_glass_experiment_scene()
     # camera, object_group, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
-    # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
+    camera, object_groups, material_map = numpy_one_weekend_demo_scene()
     # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
 
     start_time = time.perf_counter()
@@ -374,7 +374,7 @@ def numpy_bounce_render():
                 ) = object_group.get_hits(
                     ray_origins[active_ray_indecies],
                     ray_directions[active_ray_indecies],
-                    0.0001,
+                    0.001,
                     5000.0
                 )
 
@@ -1161,20 +1161,20 @@ def numpy_one_weekend_demo_scene():
         0
     )
 
-    with open("sphere_data.json") as file_handle:
-        sphere_data = json.load(file_handle)
+    # with open("sphere_data.json") as file_handle:
+    #     sphere_data = json.load(file_handle)
 
-    for sphere in sphere_data:
-        # sphere_x = sphere["pos"][0]
-        # sphere_z = sphere["pos"][2]
-        # if -3.5 < sphere_z < 3.5:
-        #     continue
-        sphere_ray_group.add_sphere(
-             numpy.array(sphere["pos"],  dtype=numpy.single),
-             sphere["radius"],
-             numpy.array([0,0,0], dtype=numpy.single),
-             0
-        )
+    # for sphere in sphere_data:
+    #     # sphere_x = sphere["pos"][0]
+    #     # sphere_z = sphere["pos"][2]
+    #     # if -3.5 < sphere_z < 3.5:
+    #     #     continue
+    #     sphere_ray_group.add_sphere(
+    #          numpy.array(sphere["pos"],  dtype=numpy.single),
+    #          sphere["radius"],
+    #          numpy.array([0,0,0], dtype=numpy.single),
+    #          0
+    #     )
 
 
     # print(len(sphere_data))
