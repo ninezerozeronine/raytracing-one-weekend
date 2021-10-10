@@ -2092,7 +2092,7 @@ def mttriangle_filter_speed_test():
     print(timeit.timeit(ray_and_tri_mask, setup=setup, number=1))
 
 
-def index_test():
+def cross_grid_test():
     a = numpy.array(
         [
             [
@@ -2103,21 +2103,49 @@ def index_test():
             ],
         ]
     )
-    print(a.shape)
-    print(a[1,2])
-    print(a[:, [0,2]])
+    # print(a.shape)
+    # print(a[1,2])
+    # print(a[:, [0,2]])
 
     b = numpy.array(
         [
             [9,9,9], [1,1,1], [2,2,2]
         ]
     )
-    print(b[numpy.newaxis, [0,2]])
-    print(numpy.cross(
-        a[:, [0,2]],
-        b[numpy.newaxis, [0,2]]
-    ))
-    print(numpy.cross(a[0,0], b[0]))
+    c = numpy.array(
+        [
+            [3,6,1], [3,3,3], [1,2,3]
+        ]
+    )
+    # print(b[numpy.newaxis, [0,2]])
+    # print(numpy.cross(
+    #     a[:, [0,2]],
+    #     b[numpy.newaxis, [0,2]]
+    # ))
+    # print(numpy.cross(a[0,0], b[0]))
+
+    # print(numpy.cross(
+    #     b[:, numpy.newaxis, :],
+    #     c[numpy.newaxis, :, :]
+    # ))
+    res = numpy.cross(
+        b[:, numpy.newaxis],
+        c[numpy.newaxis, :]
+    )
+    print(res)
+    print(numpy.cross(b[0], c[2]))
+    print(res[0,2])
+
+
+    # print(numpy.cross(
+    #     b[numpy.newaxis, :],
+    #     c[:, numpy.newaxis]
+    # ))
+
+    # print(numpy.cross(
+    #     b,
+    #     c
+    # ))
 
 # for i in range(4,20):
 #     test_array_slice(i,4)

@@ -27,7 +27,7 @@ from . import materials
 IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 20
+PIXEL_SAMPLES = 30
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -323,12 +323,12 @@ def numpy_render():
 
 def numpy_bounce_render():
 
-    # camera, object_group, material_map = numpy_dielectric_scene()
+    # camera, object_groups, material_map = numpy_dielectric_scene()
     # camera, object_groups, material_map = numpy_glass_experiment_scene()
-    # camera, object_group, material_map = numpy_triangles_scene()
+    # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
-    camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
+    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
 
     start_time = time.perf_counter()
 

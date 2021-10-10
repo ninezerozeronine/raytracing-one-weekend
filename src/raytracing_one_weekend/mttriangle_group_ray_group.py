@@ -1,6 +1,8 @@
 import math
 
 import numpy
+import psutil
+import humanize
 
 from . import renderable
 
@@ -50,24 +52,24 @@ class MTTriangleGroupRayGroup():
         normal /= numpy.linalg.norm(normal)
 
         if self.num_triangles == 0:
-            self.pt0s = numpy.array([pt0])
-            self.pt1s = numpy.array([pt1])
-            self.pt2s = numpy.array([pt2])
+            self.pt0s = numpy.array([pt0], dtype=numpy.single)
+            self.pt1s = numpy.array([pt1], dtype=numpy.single)
+            self.pt2s = numpy.array([pt2], dtype=numpy.single)
 
-            self.As = numpy.array([A])
-            self.Bs = numpy.array([B])
+            self.As = numpy.array([A], dtype=numpy.single)
+            self.Bs = numpy.array([B], dtype=numpy.single)
 
-            self.normals = numpy.array([normal])
+            self.normals = numpy.array([normal], dtype=numpy.single)
         else:
-            self.pt0s = numpy.append(self.pt0s, numpy.array([pt0]), axis=0)
-            self.pt1s = numpy.append(self.pt1s, numpy.array([pt1]), axis=0)
-            self.pt2s = numpy.append(self.pt2s, numpy.array([pt2]), axis=0)
+            self.pt0s = numpy.append(self.pt0s, numpy.array([pt0], dtype=numpy.single), axis=0)
+            self.pt1s = numpy.append(self.pt1s, numpy.array([pt1], dtype=numpy.single), axis=0)
+            self.pt2s = numpy.append(self.pt2s, numpy.array([pt2], dtype=numpy.single), axis=0)
 
-            self.As = numpy.append(self.As, numpy.array([A]), axis=0)
-            self.Bs = numpy.append(self.Bs, numpy.array([B]), axis=0)
+            self.As = numpy.append(self.As, numpy.array([A], dtype=numpy.single), axis=0)
+            self.Bs = numpy.append(self.Bs, numpy.array([B], dtype=numpy.single), axis=0)
 
             self.normals = numpy.append(
-                self.normals, numpy.array([normal]), axis=0
+                self.normals, numpy.array([normal], dtype=numpy.single), axis=0
             )
         self.num_triangles += 1
 
@@ -87,6 +89,35 @@ class MTTriangleGroupRayGroup():
         self.bounds_centre = average_pos
         self.bounds_radius = max_dist * 1.01
 
+    def _get_num_chunks(self, num_rays):
+
+        p_vecs = num_rays * self.num_triangles * 3 * 4
+        dets = num_rays * self.num_triangles * 4
+        inv_dets = num_rays * self.num_triangles * 4
+        t_vecs = num_rays * self.num_triangles * 3 * 4
+        Us = num_rays * self.num_triangles * 4
+
+        total_bytes_reqd = p_vecs + dets + inv_dets + t_vecs + Us
+
+        mem_info = psutil.virtual_memory()
+
+        # Plan to use all free memory in the system minus 10% of the
+        # total memory as a safety buffer.
+        allowable_bytes = mem_info.available - (mem_info.total * 0.1)
+
+        print(f"Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
+        print(f"Allowable mem: {humanize.naturalsize(allowable_bytes, binary=True)}")
+        print(f"Total mem required: {humanize.naturalsize(total_bytes_reqd, binary=True)}")
+
+        # If there's enough space, do it all in one chunk
+        if total_bytes_reqd < allowable_bytes:
+            return 1
+
+        # Otherwise divide into chunks such that each chunk is smaller
+        # than the allowable size 
+        return math.ceil(total_bytes_reqd/allowable_bytes)
+
+
     def get_hits(self, ray_origins, ray_dirs, t_min, t_max):
         """
         See if any of the rays hit any of the triangles
@@ -105,17 +136,100 @@ class MTTriangleGroupRayGroup():
         print(f"Num rays: {num_rays}")
         print(f"Num sphere hits: {num_sphere_hits}")
 
+        all_ray_hits = numpy.full(num_rays, False)
+        all_hit_ts = numpy.full(num_rays, t_max + 1)
+        all_hit_pts = numpy.zeros((num_rays, 3), dtype=numpy.single)
+        all_hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
+        all_back_facing = numpy.full(num_rays, False)
+        all_hit_material_indecies = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
+
         if num_sphere_hits == 0:
-            final_ts = numpy.full(num_rays, t_max + 1)
-            ray_hits = numpy.full(num_rays, False)
-            hit_points = numpy.zeros((num_rays, 3), dtype=numpy.single)
-            hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
-            back_facing = numpy.full(num_rays, False)
-            hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
-            return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
+            return (
+                all_ray_hits,
+                all_hit_ts,
+                all_hit_pts,
+                all_hit_normals,
+                all_hit_material_indecies,
+                all_back_facing
+            )
+        ray_origins_sphere_hits = ray_origins[sphere_hits]
+        ray_dirs_sphere_hits = ray_dirs[sphere_hits]
+
+        num_chunks = self._get_num_chunks(int(num_sphere_hits))
+
+        if num_chunks == 1:
+            (
+                ray_hits,
+                hit_ts,
+                hit_pts,
+                hit_normals,
+                hit_material_indecies,
+                back_facing
+            ) = self._get_hits(ray_origins_sphere_hits, ray_dirs_sphere_hits, t_min, t_max)
+        else:
+            ray_origins_chunks = numpy.array_split(ray_origins_sphere_hits, num_chunks)
+            ray_dirs_chunks = numpy.array_split(ray_dirs_sphere_hits, num_chunks)
+
+            print(f"Chunk 1 of {num_chunks}")
+            (
+                ray_hits,
+                hit_ts,
+                hit_pts,
+                hit_normals,
+                hit_material_indecies,
+                back_facing
+            ) = self._get_hits(
+                ray_origins_chunks[0],
+                ray_dirs_chunks[0],
+                t_min,
+                t_max
+            )
+
+            for chunk_index in range(1, num_chunks):
+                print(f"Chunk {chunk_index + 1} of {num_chunks}")
+                (
+                    ray_hits_chunk,
+                    hit_ts_chunk,
+                    hit_pts_chunk,
+                    hit_normals_chunk,
+                    hit_material_indecies_chunk,
+                    back_facing_chunk
+                ) = self._get_hits(
+                    ray_origins_chunks[chunk_index],
+                    ray_dirs_chunks[chunk_index],
+                    t_min,
+                    t_max
+                )
+                ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
+                hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
+                hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
+                hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+                hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
+                back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
+
+        all_ray_hits[sphere_hits] = ray_hits
+        all_hit_ts[sphere_hits] = hit_ts
+        all_hit_pts[sphere_hits] = hit_pts
+        all_hit_normals[sphere_hits] = hit_normals
+        all_hit_material_indecies[sphere_hits] = hit_material_indecies
+        all_back_facing[sphere_hits] = back_facing
+
+        return (
+            all_ray_hits,
+            all_hit_ts,
+            all_hit_pts,
+            all_hit_normals,
+            all_hit_material_indecies,
+            all_back_facing
+        )
 
 
+    def _get_hits(self, ray_origins, ray_dirs, t_min, t_max):
 
+        num_rays = ray_origins.shape[0]
+
+        mem_info = psutil.virtual_memory()
+        begin_avail = mem_info.available
 
         # This is a 2D grid of vectors num rays by num triangles in size
         # where each element is the cross product of the dir and B
@@ -128,8 +242,8 @@ class MTTriangleGroupRayGroup():
         # arrays of shape (<len_dirs>, <len_bs>, 3) where dir is
         # repeated along axis 1 and <b is repeated along axis 0
         p_vecs = numpy.cross(
-            ray_dirs[sphere_hits, numpy.newaxis, :],
-            self.Bs[numpy.newaxis, :, :]
+            ray_dirs[:, numpy.newaxis],
+            self.Bs[numpy.newaxis, :]
         )
 
         # This is a grid of scalars num rays by num triangles.
@@ -148,16 +262,25 @@ class MTTriangleGroupRayGroup():
         # This is a 2D grid of vectors num rays by num triangles in size
         # where each element is the origin for the ray in each row minus
         # the pt0 for the triangle in each column 
-        t_vecs = ray_origins[sphere_hits, numpy.newaxis] - self.pt0s
+        t_vecs = ray_origins[:, numpy.newaxis] - self.pt0s
 
         # A 2D gris of scalars num rays by num tris. Each element is the
         # dot product of the vectors in the corresponding position of
         # the input arrays
         Us = numpy.einsum("...ij,...ij->...i", t_vecs, p_vecs) * inv_dets
 
-        triangle_misses = numpy.sum((Us > 1.0) | (Us < 0.0), axis=0) == num_sphere_hits
+        mem_info = psutil.virtual_memory()
+        # print(f"After Cs Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
+
+        end_avail = mem_info.available
+
+        used_mem = begin_avail - end_avail
+        print(f"Used mem: {humanize.naturalsize(used_mem, binary=True)}")
+
+
+        # triangle_misses = numpy.sum((Us > 1.0) | (Us < 0.0), axis=0) == num_sphere_hits
         # print(f"triangle_misses: {triangle_misses}")
-        triangle_hits = numpy.logical_not(triangle_misses)
+        # triangle_hits = numpy.logical_not(triangle_misses)
 
         # Free some memory
         del p_vecs
@@ -185,13 +308,13 @@ class MTTriangleGroupRayGroup():
         # - The ray dir for that row.
         # Then multiplied by the inverse determinant for the
         # corresponding position
-        Vs = numpy.einsum("...j,...ij->...i", ray_dirs[sphere_hits], q_vecs) * inv_dets
+        Vs = numpy.einsum("...j,...ij->...i", ray_dirs, q_vecs) * inv_dets
         # Vs = numpy.einsum("...j,...ij->...i", ray_dirs[sphere_hits], q_vecs) * inv_dets[:, triangle_hits]
 
         # A 2D grid of scalars num rays by num tris. Each element is
         # the dot product of:
         # - The Q_vec from the corresponding position
-        # - The B for the tirangle for that column
+        # - The B for the triangle for that column
         # Then multiplied by the inverse determinant for the
         # corresponding position
         Ts = numpy.einsum("ij,...ij->...i", self.Bs, q_vecs) * inv_dets
@@ -226,48 +349,37 @@ class MTTriangleGroupRayGroup():
 
         Ts[misses] = t_max + 1
 
-        # Array sphere hits in length. The index is into the list
+        # Array num_rays in length. The index is into the list
         # of triangles that hit, not the overall list of triangles
         smallest_t_indecies = numpy.argmin(Ts, axis=1)
 
-        # Array sphere hits in length, contains the smallest t value
+        # Array num_rays in length, contains the smallest t value
         # for that ray
-        smallest_ts = Ts[numpy.arange(Ts.shape[0]), smallest_t_indecies]
+        final_ts = Ts[numpy.arange(num_rays), smallest_t_indecies]
 
         # Array num rays long
-        final_ts = numpy.full(num_rays, t_max + 1)
+        # final_ts = numpy.full(num_rays, t_max + 1)
 
         # Splice the ts from the ray hits into all the rays
-        final_ts[sphere_hits] = smallest_ts
-
+        # final_ts[sphere_hits] = smallest_ts
 
         ray_hits = numpy.full(num_rays, False)
         ray_hits = final_ts < t_max
 
         hit_points = numpy.zeros((num_rays, 3), dtype=numpy.single)
-        hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * smallest_ts[..., numpy.newaxis]
+        hit_points[ray_hits] = ray_origins[ray_hits] + ray_dirs[ray_hits] * final_ts[ray_hits][..., numpy.newaxis]
+        # hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * smallest_ts[..., numpy.newaxis]
 
         hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
-        hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
+        hit_normals[ray_hits] = self.normals[smallest_t_indecies[ray_hits]]
+        # hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
         # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
 
-        back_facing = numpy.full(num_rays, False)
-        back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
+        # back_facing = numpy.full(num_rays, False)
+        back_facing = dets[numpy.arange(num_rays), smallest_t_indecies] < 0.0
+        # back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
         hit_normals[back_facing] *= -1.0
 
         hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
 
-        # ray_hits = numpy.full((num_rays), False)
-
         return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
-
-        # ray_hits = numpy.any(numpy.less(Ts, t_max), axis=1)
-
-
-        # Rays that hit (1D array of bools, num rays long)
-        # Hit Ts (1D array of scalars, num rays long)
-        # Hit Points (1D array of vectors, num rays long)
-        # Hit Normals (1D array of vectors, num rays long)
-        # Hit Material indecies (1D array of ints, num rays long)
-        # Hit Backfaces (1D array of bools, num rays long)
-
