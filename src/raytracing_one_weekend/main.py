@@ -24,8 +24,8 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 30
 MAX_BOUNCES = 4
@@ -326,9 +326,9 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_dielectric_scene()
     # camera, object_groups, material_map = numpy_glass_experiment_scene()
     # camera, object_groups, material_map = numpy_triangles_scene()
-    # camera, object_groups, material_map = numpy_simple_sphere_scene()
+    camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
 
     start_time = time.perf_counter()
 
@@ -1333,7 +1333,7 @@ def numpy_triangles_scene():
 
 
 def numpy_simple_sphere_scene():
-    cam_pos = numpy.array([0.0, 1.0, 6.0])
+    cam_pos = numpy.array([10.0, 5.0, 10.0])
     cam_lookat = numpy.array([0.0, 0.5, 0.0])
     # cam_pos = numpy.array([5.0, 5.0, 5.0])
     # cam_lookat = numpy.array([0.0, 0.5, 0.0])
@@ -1346,9 +1346,16 @@ def numpy_simple_sphere_scene():
     ground_mat = materials.NumpyPointOnHemiSphereMaterial(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
+    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([2, 2, 2], dtype=numpy.single),
+        numpy.array([0, 0, 0], dtype=numpy.single),
+        numpy.array([0.5, 0.8, 0.5], dtype=numpy.single),
+        numpy.array([0.9, 0.5, 0.5], dtype=numpy.single)
+    )
 
     material_map = {
         0: ground_mat,
+        1: checker_mat,
     }
 
     # Sphere setup
@@ -1362,7 +1369,7 @@ def numpy_simple_sphere_scene():
         0
     )
 
-    # Brown
+    # Grey
     sphere_ray_group.add_sphere(
         numpy.array([-1.0, 0.5, 0.0], dtype=numpy.single),
         0.5,
@@ -1370,12 +1377,12 @@ def numpy_simple_sphere_scene():
         0
     )
 
-    # Red
+    # Checker
     sphere_ray_group.add_sphere(
-        numpy.array([-2.3, 0.3, -0.4], dtype=numpy.single),
-        0.3,
+        numpy.array([2, 2, 0], dtype=numpy.single),
+        2.0,
         numpy.array([1,0,0], dtype=numpy.single),
-        0
+        1
     )
 
     return camera, [sphere_ray_group], material_map

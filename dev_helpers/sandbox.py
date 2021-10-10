@@ -2147,13 +2147,49 @@ def cross_grid_test():
     #     c
     # ))
 
-# for i in range(4,20):
-#     test_array_slice(i,4)
-#     print("")
+
+def chequerboard_test():
+
+    pts = numpy.array(
+        [
+            [0.5,0.5,0.5], [1.5,1.3,1.4], [-0.2,-0.3,-0.2], [1.5, 0.5, 0.5]
+        ]
+    )
+
+    print(pts[:,0])
+
+    xs = numpy.remainder(numpy.fabs(numpy.floor(pts[:,0] * 1.0 + 0.0)), 2)
+    ys = numpy.remainder(numpy.fabs(numpy.floor(pts[:,1] * 1.0 + 0.0)), 2)
+    zs = numpy.remainder(numpy.fabs(numpy.floor(pts[:,2] * 1.0 + 0.0)), 2)
+
+    print(xs)
+    print(ys)
+    print(zs)
+    choices = numpy.logical_xor(xs, ys, zs)
+    print(choices)
+
+    col_a = numpy.array([1,2,3])
+    col_b = numpy.array([4,5,6])
+
+    print(numpy.where(
+        choices[:, numpy.newaxis],
+        col_a,
+        col_b
+    ))
+    # print(numpy.choose(
+    #     choices,
+    #     numpy.array([[1,1,1], [3,3,3]])
+    # ))
 
 
+    # if (
+             # (abs(math.floor(hit_record.hit_point[0] * self.scale[0] + self.offset[0])) % 2)
+    #         ^ (abs(math.floor(hit_record.hit_point[1] * self.scale[1] + self.offset[1])) % 2)
+    #         ^ (abs(math.floor(hit_record.hit_point[2] * self.scale[2] + self.offset[2])) % 2)
+    #         ):
 
 main.main()
+# chequerboard_test()
 # mttriangle_filter_speed_test()
 # index_test()
 # cross_grid_test()

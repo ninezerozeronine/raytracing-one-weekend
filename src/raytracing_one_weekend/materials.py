@@ -199,6 +199,47 @@ class NumpyPointOnHemiSphereMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
+class NumpyPointOnHemiSphereCheckerboardMaterial():
+    def __init__(self, scale, offset, colour_a, colour_b):
+        """
+        Initialise the object.
+
+        Args:
+        """
+        self.scale = scale
+        self.offset = offset
+        self.colour_a = colour_a
+        self.colour_b = colour_b
+
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+
+        # Generate points in unit hemispheres pointing in the normal direction
+        ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
+
+        # Reverse any points in the wrong hemisphere
+        cosine_angles = numpy.einsum("ij,ij->i", ray_dirs, hit_normals)
+        facing_wrong_way = cosine_angles < 0.0
+        ray_dirs[facing_wrong_way] *= -1.0
+
+        # Bounce ray origins are the hit points we fed in
+        # Bounce ray directions are the random points in the hemisphere.
+
+        Xs = numpy.remainder(numpy.fabs(numpy.floor(hit_points[:, 0] * self.scale[0] + self.offset[0])), 2)
+        Ys = numpy.remainder(numpy.fabs(numpy.floor(hit_points[:, 1] * self.scale[1] + self.offset[1])), 2)
+        Zs = numpy.remainder(numpy.fabs(numpy.floor(hit_points[:, 2] * self.scale[2] + self.offset[2])), 2)
+        col_choice = numpy.logical_xor(Xs, numpy.logical_xor(Ys, Zs))
+        hit_cols = numpy.where(
+            col_choice[:, numpy.newaxis],
+            self.colour_a,
+            self.colour_b
+        )
+
+        absorbtions = numpy.full((hit_points.shape[0]), False)
+
+        return hit_points, ray_dirs, hit_cols, absorbtions
+
+
+
 class PointInUnitSphereMaterial():
     """
     Scatter rays towards points in a unit sphere which it's base at the
