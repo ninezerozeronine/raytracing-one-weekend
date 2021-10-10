@@ -171,7 +171,7 @@ class MTTriangleGroupRayGroup():
         #     t_vecs[:, triangle_hits, :],
         #     self.As[numpy.newaxis, triangle_hits]
         # )
-        print(f"q_vecs shape: {q_vecs.shape}")
+        # print(f"q_vecs shape: {q_vecs.shape}")
 
         # Free some memory
         del t_vecs
@@ -200,23 +200,23 @@ class MTTriangleGroupRayGroup():
 
         miss_by_det = numpy.absolute(dets) < 0.00001
         # miss_by_det = numpy.absolute(dets[:, triangle_hits]) < 0.00001
-        print(f"miss_by_det shape: {miss_by_det.shape}")
+        # print(f"miss_by_det shape: {miss_by_det.shape}")
         # print(f"triangles missed per ray by det: {numpy.sum(miss_by_det, axis=1)}")
 
         miss_by_Us = (Us > 1.0) | (Us < 0.0)
         # miss_by_Us = (Us[:, triangle_hits] > 1.0) | (Us[:, triangle_hits] < 0.0)
-        print(f"miss_by_Us shape: {miss_by_Us.shape}")
+        # print(f"miss_by_Us shape: {miss_by_Us.shape}")
         # print(f"triangles missed per ray by Us: {numpy.sum(miss_by_Us, axis=1)}")
         # print(f"Rays missed per triangle by Us: {numpy.sum(miss_by_Us, axis=0)}")
 
         miss_by_Vs = (Vs < 0.0) | ((Us + Vs) > 1.0)
         # miss_by_Vs = (Vs < 0.0) | ((Us[:, triangle_hits] + Vs) > 1.0)
-        print(f"miss_by_Vs shape: {miss_by_Vs.shape}")
+        # print(f"miss_by_Vs shape: {miss_by_Vs.shape}")
         # print(f"triangles missed per ray by Vs: {numpy.sum(miss_by_Vs, axis=1)}")
         # print(f"Rays missed per triangle by Vs: {numpy.sum(miss_by_Vs, axis=0)}")
 
         miss_by_Ts = (Ts < t_min) | (Ts > t_max)
-        print(f"miss_by_Ts shape: {miss_by_Ts.shape}")
+        # print(f"miss_by_Ts shape: {miss_by_Ts.shape}")
         # print(f"triangles missed per ray by Ts: {numpy.sum(miss_by_Ts, axis=1)}")
 
         misses = miss_by_det | miss_by_Us | miss_by_Vs | miss_by_Ts

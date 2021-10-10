@@ -24,10 +24,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 30
+PIXEL_SAMPLES = 20
 MAX_BOUNCES = 4
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -324,10 +324,11 @@ def numpy_render():
 def numpy_bounce_render():
 
     # camera, object_group, material_map = numpy_dielectric_scene()
-    # camera, object_group, material_map = numpy_glass_experiment_scene()
+    camera, object_groups, material_map = numpy_glass_experiment_scene()
     # camera, object_group, material_map = numpy_triangles_scene()
-    # camera, object_group, material_map = numpy_simple_sphere_scene()
-    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = numpy_simple_sphere_scene()
+    # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
+    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
 
     start_time = time.perf_counter()
 
@@ -361,10 +362,6 @@ def numpy_bounce_render():
 
             for object_group in object_groups:
 
-                num_chunks = 30
-                ray_origins_chunks = numpy.array_split(ray_origins[active_ray_indecies], num_chunks)
-                ray_directions_chunks = numpy.array_split(ray_directions[active_ray_indecies], num_chunks)
-                print(f"Chunk 1 of {num_chunks}")
                 # Eeeeew - this is getting a bit out of hand :(
                 # Also need to catch the case where there are no hits.
                 (
@@ -375,32 +372,11 @@ def numpy_bounce_render():
                     tmp_hit_material_indecies,
                     tmp_back_facing
                 ) = object_group.get_hits(
-                    ray_origins_chunks[0],
-                    ray_directions_chunks[0],
+                    ray_origins[active_ray_indecies],
+                    ray_directions[active_ray_indecies],
                     0.0001,
                     5000.0
                 )
-                for chunk_index in range(1,num_chunks):
-                    print(f"Chunk {chunk_index+1} of {num_chunks}")
-                    (
-                        tmp_ray_hits_chunk,
-                        tmp_hit_ts_chunk,
-                        tmp_hit_pts_chunk,
-                        tmp_hit_normals_chunk,
-                        tmp_hit_material_indecies_chunk,
-                        tmp_back_facing_chunk
-                    ) = object_group.get_hits(
-                        ray_origins_chunks[chunk_index],
-                        ray_directions_chunks[chunk_index],
-                        0.0001,
-                        5000.0
-                    )
-                    tmp_ray_hits = numpy.concatenate((tmp_ray_hits, tmp_ray_hits_chunk), axis=0)
-                    tmp_hit_ts = numpy.concatenate((tmp_hit_ts, tmp_hit_ts_chunk), axis=0)
-                    tmp_hit_pts = numpy.concatenate((tmp_hit_pts, tmp_hit_pts_chunk), axis=0)
-                    tmp_hit_normals = numpy.concatenate((tmp_hit_normals, tmp_hit_normals_chunk), axis=0)
-                    tmp_hit_material_indecies = numpy.concatenate((tmp_hit_material_indecies, tmp_hit_material_indecies_chunk), axis=0)
-                    tmp_back_facing = numpy.concatenate((tmp_back_facing, tmp_back_facing_chunk), axis=0)
 
                 ray_hits = ray_hits | tmp_ray_hits
                 condition = tmp_ray_hits & (tmp_hit_ts < hit_ts)
@@ -1125,7 +1101,7 @@ def dielectric_debug_scene():
     return world, camera
 
 
-def numpy_dielectric_scene():
+def numpy_one_weekend_demo_scene():
     cam_pos = numpy.array([13.0, 2.0, 3.0])
     cam_lookat = numpy.array([0.0, 0.5, 0.0])
     focus_dist = 10.0
@@ -1153,20 +1129,20 @@ def numpy_dielectric_scene():
     # Sphere setup
     sphere_ray_group = SphereGroupRayGroup()
 
-    # Red
+    # Discrete
     sphere_ray_group.add_sphere(
         numpy.array([-4, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([1,0,0], dtype=numpy.single),
-        0
+        3
     )
 
-    # Green
+    # Glass
     sphere_ray_group.add_sphere(
         numpy.array([0, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([0,1,0], dtype=numpy.single),
-        3
+        2
     )
 
     # Metal
@@ -1174,7 +1150,7 @@ def numpy_dielectric_scene():
         numpy.array([4, 1, 0], dtype=numpy.single),
         1.0,
         numpy.array([0.9,0.9,0.9], dtype=numpy.single),
-        2
+        1
     )
 
     # Ground
@@ -1185,8 +1161,21 @@ def numpy_dielectric_scene():
         0
     )
 
-    # with open("sphere_data.json") as file_handle:
-    #     sphere_data = json.load(file_handle)
+    with open("sphere_data.json") as file_handle:
+        sphere_data = json.load(file_handle)
+
+    for sphere in sphere_data:
+        # sphere_x = sphere["pos"][0]
+        # sphere_z = sphere["pos"][2]
+        # if -3.5 < sphere_z < 3.5:
+        #     continue
+        sphere_ray_group.add_sphere(
+             numpy.array(sphere["pos"],  dtype=numpy.single),
+             sphere["radius"],
+             numpy.array([0,0,0], dtype=numpy.single),
+             0
+        )
+
 
     # print(len(sphere_data))
     # for sphere in sphere_data:

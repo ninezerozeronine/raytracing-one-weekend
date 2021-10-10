@@ -129,7 +129,6 @@ class Camera():
             pixel_positions[:,y_coord,...,1] = y_coord
 
         sample_offsets = RNG.uniform(low=0.0, high=1.0, size=(width, height, samples, 3))
-        sample_offsets = sample_offsets.astype(numpy.single)
         pixel_positions += sample_offsets
 
         pixel_positions[...,0] /= width
@@ -169,6 +168,9 @@ class Camera():
         ray_origins = offset_vecs_oriented + self.camera_pos
         ray_dirs = pts_on_viewport - ray_origins
         ray_dirs /= numpy.sqrt(numpy.einsum("...ij,...ij->...i", ray_dirs, ray_dirs))[..., numpy.newaxis]
+
+        ray_origins = ray_origins.astype(numpy.single)
+        ray_dirs = ray_dirs.astype(numpy.single)
         # ray_dirs /= numpy.sqrt((ray_dirs ** 2).sum(axis=-1))[..., numpy.newaxis]
 
 

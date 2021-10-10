@@ -1,8 +1,11 @@
 """
 A group of spheres that can collide with a group of rays.
 """
+import math
 
 import numpy
+import psutil
+import humanize
 
 class SphereGroupRayGroup():
     """
@@ -17,9 +20,10 @@ class SphereGroupRayGroup():
         self.radii = None
         self.colours = None
         self.material_indecies = None
+        self.num_spheres = 0
 
     def add_sphere(self, centre, radius, colour, material_index):
-        if self.centres is None:
+        if self.num_spheres == 0:
             self.centres = numpy.array([centre], dtype=numpy.single)
             self.radii = numpy.array([radius], dtype=numpy.single)
             self.colours = numpy.array([colour], dtype=numpy.single)
@@ -38,7 +42,87 @@ class SphereGroupRayGroup():
                 self.material_indecies, numpy.array([material_index], dtype=numpy.ubyte), axis=0
             )
 
+        self.num_spheres += 1
+
+    def _get_num_chunks(self, num_rays):
+
+        C_to_Os = num_rays * self.num_spheres * 3 * 4
+        Hs = num_rays * self.num_spheres * 4
+        Cs = num_rays * self.num_spheres * 4
+        total_mem_reqd = C_to_Os + Hs + Cs
+
+        mem_info = psutil.virtual_memory()
+
+        # Plan to use all free memory in the system minus 10% of the
+        # total memory as a safety buffer.
+        allowable_mem = mem_info.available - (mem_info.total * 0.1)
+
+        print(f"Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
+        print(f"Allowable mem: {humanize.naturalsize(allowable_mem, binary=True)}")
+        print(f"Total mem required: {humanize.naturalsize(total_mem_reqd, binary=True)}")
+
+        # If there's enough space, do it all in one chunk
+        if total_mem_reqd < allowable_mem:
+            return 1
+
+        # Otherwise divide into chunks such that each chunk is smaller
+        # than the allowable size 
+        return math.ceil(total_mem_reqd/allowable_mem)
+
     def get_hits(self, ray_origins, ray_dirs, t_min, t_max):
+        num_rays = ray_origins.shape[0]
+        num_chunks = self._get_num_chunks(num_rays)
+
+        if num_chunks == 1:
+            return self._get_hits(ray_origins, ray_dirs, t_min, t_max)
+
+        ray_origins_chunks = numpy.array_split(ray_origins, num_chunks)
+        ray_dirs_chunks = numpy.array_split(ray_dirs, num_chunks)
+
+        print(f"Chunk 1 of {num_chunks}")
+        (
+            ray_hits,
+            hit_ts,
+            hit_pts,
+            hit_normals,
+            hit_material_indecies,
+            back_facing
+        ) = self._get_hits(
+            ray_origins_chunks[0],
+            ray_dirs_chunks[0],
+            t_min,
+            t_max
+        )
+
+        for chunk_index in range(1, num_chunks):
+            print(f"Chunk {chunk_index + 1} of {num_chunks}")
+            (
+                ray_hits_chunk,
+                hit_ts_chunk,
+                hit_pts_chunk,
+                hit_normals_chunk,
+                hit_material_indecies_chunk,
+                back_facing_chunk
+            ) = self._get_hits(
+                ray_origins_chunks[chunk_index],
+                ray_dirs_chunks[chunk_index],
+                0.0001,
+                5000.0
+            )
+            ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
+            hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
+            hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
+            hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+            hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
+            back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
+
+        return ray_hits, hit_ts, hit_pts, hit_normals, hit_material_indecies, back_facing
+
+    def _get_hits(self, ray_origins, ray_dirs, t_min, t_max):
+
+        mem_info = psutil.virtual_memory()
+        begin_avail = mem_info.available
+        # print(f"Start Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
 
         # This is a grid of vectors num_rays by num_spheres in size
         # It's every origin minus every sphere centre
@@ -48,6 +132,10 @@ class SphereGroupRayGroup():
         # R0|R0-C0 R0-C1 R0-C2
         # R1|R1-C0 R1-C1 R1-C2
         C_to_Os = ray_origins[:, numpy.newaxis] - self.centres
+
+
+        # mem_info = psutil.virtual_memory()
+        # print(f"After C_to_Os Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
 
         # This is a grid of scalars num_rays by num_spheres in size
         # It's as if we take the C_to_Os gris, and then for each row
@@ -60,6 +148,9 @@ class SphereGroupRayGroup():
         # R1|R1.(R1-C0) R1.(R1-C1) R1.(R1-C2)
         Hs = numpy.einsum("...i,...ki", ray_dirs, C_to_Os)
 
+        # mem_info = psutil.virtual_memory()
+        # print(f"After Hs Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
+
         # This is a grid of scalars num_rays by num_spheres in size.
         # It's the dot product of each C_to_O with itself, minus the radius
         # of the sphere for that column squared
@@ -69,6 +160,14 @@ class SphereGroupRayGroup():
         # R0|C20.C20 - S0.r^2   C20.C20 - S1.r^2   C20.C20 - S2.r^2
         # R1|C20.C20 - S0.r^2   C20.C20 - S1.r^2   C20.C20 - S2.r^2
         Cs = numpy.einsum("...ij,...ij->...i", C_to_Os, C_to_Os) - self.radii**2
+
+        mem_info = psutil.virtual_memory()
+        # print(f"After Cs Available mem: {humanize.naturalsize(mem_info.available, binary=True)}")
+
+        end_avail = mem_info.available
+
+        used_mem = begin_avail - end_avail
+        print(f"Used mem: {humanize.naturalsize(used_mem, binary=True)}")
 
         # Free some memory
         del C_to_Os
