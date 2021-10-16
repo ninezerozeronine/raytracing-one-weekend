@@ -24,11 +24,11 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 30
-MAX_BOUNCES = 4
+MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
@@ -326,9 +326,11 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_dielectric_scene()
     # camera, object_groups, material_map = numpy_glass_experiment_scene()
     # camera, object_groups, material_map = numpy_triangles_scene()
-    camera, object_groups, material_map = numpy_simple_sphere_scene()
+    # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
     # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = numpy_bunnies_scene()
+    camera, object_groups, material_map = numpy_cow_scene()
 
     start_time = time.perf_counter()
 
@@ -989,6 +991,271 @@ def bunnies_scene():
 
 
     return world, camera
+
+
+def numpy_bunnies_scene():
+    cam_pos = numpy.array([3.0, 5.0, 10.0])
+    cam_lookat = numpy.array([-1.0, 1.2, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([1.0, 1.0, 1.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([0.5, 0.5, 0.5]),
+        numpy.array([0.3, 0.3, 0.3]),
+    )
+    red_blue_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([2.0, 2.0, 2.0]),
+        numpy.array([0.2, 0.2, 0.2]),
+        numpy.array([0.7, 0.3, 0.2]),
+        numpy.array([0.1, 0.2, 0.5]),
+    )
+    metal_mat = materials.NumpyMetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    glass_mat = materials.NumpyDielectricMaterial(1.5)
+    normal_mat = materials.NumpyNormalToRGBMaterial()
+
+    material_map = {
+        0: ground_mat,
+        1: red_blue_mat,
+        2: metal_mat,
+        3: glass_mat,
+        4: normal_mat
+    }
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([0,0,0], dtype=numpy.single),
+        0
+    )
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("bunny.obj")
+
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    spacing = 2.0
+
+    # Metal bunny
+    metal_grp = MTTriangleGroupRayGroup(2)
+    offset_x = -spacing
+    offset_z = -spacing
+    for triangle in obj_mesh.faces:
+        metal_grp.add_triangle(
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[0][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[0][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[1][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[1][0]][2] + offset_z,
+                ],
+                    dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[2][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[2][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            )
+        )
+
+    # Glass bunny
+    glass_grp = MTTriangleGroupRayGroup(3)
+    offset_x = spacing
+    offset_z = spacing
+    for triangle in obj_mesh.faces:
+        glass_grp.add_triangle(
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[0][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[0][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[1][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[1][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[2][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[2][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            )
+        )
+
+    # Red/blue bunny
+    red_blue_grp = MTTriangleGroupRayGroup(1)
+    offset_x = -spacing
+    offset_z = spacing
+    for triangle in obj_mesh.faces:
+        red_blue_grp.add_triangle(
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[0][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[0][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[1][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[1][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[2][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[2][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            )
+        )
+
+
+    # Normal bunny
+    normal_grp = MTTriangleGroupRayGroup(4)
+    offset_x = spacing
+    offset_z = -spacing
+    for triangle in obj_mesh.faces:
+        normal_grp.add_triangle(
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[0][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[0][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[1][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[1][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[2][0]][0] + offset_x,
+                    obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[2][0]][2] + offset_z,
+                ],
+                dtype=numpy.single
+            )
+        )
+
+
+    return camera, [sphere_ray_group, metal_grp, glass_grp, red_blue_grp, normal_grp], material_map
+
+
+def numpy_cow_scene():
+    cam_pos = numpy.array([11.0, 8.0, 9.0])
+    cam_lookat = numpy.array([1.0, 3.0, -1.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([1.0, 1.0, 1.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([0.2, 0.7, 0.3]),
+        numpy.array([0.1, 0.9, 0.2]),
+    )
+    black_white_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([1.0, 1.0, 1.0]),
+        numpy.array([0.2, 0.2, 0.2]),
+        numpy.array([0.8, 0.8, 0.85]),
+        numpy.array([0.25, 0.25, 0.2]),
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: black_white_mat,
+    }
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([0,0,0], dtype=numpy.single),
+        0
+    )
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("cow.obj")
+
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    spacing = 2.0
+
+    # Metal bunny
+    cow_grp = MTTriangleGroupRayGroup(1)
+    for triangle in obj_mesh.faces:
+        cow_grp.add_triangle(
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[0][0]][0],
+                    obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[0][0]][2],
+                ],
+                dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[1][0]][0],
+                    obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[1][0]][2],
+                ],
+                    dtype=numpy.single
+            ),
+            numpy.array(
+                [
+                    obj_mesh.vertices[triangle[2][0]][0],
+                    obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                    obj_mesh.vertices[triangle[2][0]][2],
+                ],
+                dtype=numpy.single
+            )
+        )
+
+
+    return camera, [sphere_ray_group, cow_grp], material_map
 
 
 def checkerboard_scene():

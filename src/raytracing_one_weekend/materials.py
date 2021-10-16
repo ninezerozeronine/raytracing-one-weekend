@@ -239,7 +239,6 @@ class NumpyPointOnHemiSphereCheckerboardMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-
 class PointInUnitSphereMaterial():
     """
     Scatter rays towards points in a unit sphere which it's base at the
@@ -420,6 +419,30 @@ class NormalToRGBMaterial():
             colour,
             scattered_ray,
         )
+
+
+class NumpyNormalToRGBMaterial():
+    """
+    Colour the surface based on the discretised world normal at that
+    point.
+    """
+
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+
+        # Generate points in unit hemispheres pointing in the normal direction
+        ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
+
+        # Reverse any points in the wrong hemisphere
+        cosine_angles = numpy.einsum("ij,ij->i", ray_dirs, hit_normals)
+        facing_wrong_way = cosine_angles < 0.0
+        ray_dirs[facing_wrong_way] *= -1.0
+
+
+        hit_cols = (hit_normals + 1.0) * 0.5
+
+        absorbtions = numpy.full((hit_points.shape[0]), False)
+
+        return hit_points, ray_dirs, hit_cols, absorbtions
 
 
 class NormalToDiscreteRGBMaterial():
