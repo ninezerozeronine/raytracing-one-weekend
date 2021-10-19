@@ -24,10 +24,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 30
+PIXEL_SAMPLES = 10
 MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -328,9 +328,9 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
-    camera, object_groups, material_map = numpy_cow_scene()
+    # camera, object_groups, material_map = numpy_cow_scene()
 
     start_time = time.perf_counter()
 
@@ -359,6 +359,7 @@ def numpy_bounce_render():
             hit_ts = numpy.full((num_rays,), 5001.0)
             hit_pts = numpy.full((num_rays, 3), 0.0)
             hit_normals = numpy.full((num_rays, 3), 0.0)
+            hit_uvs = numpy.full((num_rays, 2), 0.0)
             hit_material_indecies = numpy.full((num_rays,), -1, dtype=numpy.ubyte)
             back_facing = numpy.full((num_rays,), False)
 
@@ -371,6 +372,7 @@ def numpy_bounce_render():
                     tmp_hit_ts,
                     tmp_hit_pts,
                     tmp_hit_normals,
+                    tmp_hit_uvs,
                     tmp_hit_material_indecies,
                     tmp_back_facing
                 ) = object_group.get_hits(
@@ -395,7 +397,12 @@ def numpy_bounce_render():
                 hit_normals = numpy.where(
                     condition[..., numpy.newaxis],
                     tmp_hit_normals,
-                    hit_normals)
+                    hit_normals
+                )
+                hit_uvs = numpy.where(
+                    condition[..., numpy.newaxis],
+                    tmp_hit_uvs,
+                    hit_uvs)
                 hit_material_indecies = numpy.where(
                     condition,
                     tmp_hit_material_indecies,
@@ -1763,6 +1770,9 @@ def ray_group_triangle_group_bunny_scene():
                 obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
                 obj_mesh.vertices[triangle[2][0]][2],
             ]),
+            uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]])
         )
 
     # Sphere setup

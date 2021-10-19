@@ -33,6 +33,9 @@ class MTTriangleGroupRayGroup():
         self.pt0s = None
         self.pt1s = None
         self.pt2s = None
+        self.uv0s = None
+        self.uv1s = None
+        self.uv2s = None
         self.normals = None
         self.As = None
         self.Bs = None
@@ -41,7 +44,7 @@ class MTTriangleGroupRayGroup():
         self.bounds_radius = None
         self.num_triangles = 0
 
-    def add_triangle(self, pt0, pt1, pt2):
+    def add_triangle(self, pt0, pt1, pt2, uv0=(0.0, 0.0), uv1=(0.0, 0.0), uv2=(0.0, 0.0)):
         """
         Add a triangle to the group
         """
@@ -56,6 +59,10 @@ class MTTriangleGroupRayGroup():
             self.pt1s = numpy.array([pt1], dtype=numpy.single)
             self.pt2s = numpy.array([pt2], dtype=numpy.single)
 
+            self.uv0s = numpy.array([uv0], dtype=numpy.single)
+            self.uv1s = numpy.array([uv1], dtype=numpy.single)
+            self.uv2s = numpy.array([uv2], dtype=numpy.single)
+
             self.As = numpy.array([A], dtype=numpy.single)
             self.Bs = numpy.array([B], dtype=numpy.single)
 
@@ -64,6 +71,10 @@ class MTTriangleGroupRayGroup():
             self.pt0s = numpy.append(self.pt0s, numpy.array([pt0], dtype=numpy.single), axis=0)
             self.pt1s = numpy.append(self.pt1s, numpy.array([pt1], dtype=numpy.single), axis=0)
             self.pt2s = numpy.append(self.pt2s, numpy.array([pt2], dtype=numpy.single), axis=0)
+
+            self.uv0s = numpy.append(self.uv0s, numpy.array([uv0], dtype=numpy.single), axis=0)
+            self.uv1s = numpy.append(self.uv1s, numpy.array([uv1], dtype=numpy.single), axis=0)
+            self.uv2s = numpy.append(self.uv2s, numpy.array([uv2], dtype=numpy.single), axis=0)
 
             self.As = numpy.append(self.As, numpy.array([A], dtype=numpy.single), axis=0)
             self.Bs = numpy.append(self.Bs, numpy.array([B], dtype=numpy.single), axis=0)
@@ -140,6 +151,7 @@ class MTTriangleGroupRayGroup():
         all_hit_ts = numpy.full(num_rays, t_max + 1)
         all_hit_pts = numpy.zeros((num_rays, 3), dtype=numpy.single)
         all_hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
+        all_hit_uvs = numpy.zeros((num_rays, 2), dtype=numpy.single)
         all_back_facing = numpy.full(num_rays, False)
         all_hit_material_indecies = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
 
@@ -149,6 +161,7 @@ class MTTriangleGroupRayGroup():
                 all_hit_ts,
                 all_hit_pts,
                 all_hit_normals,
+                all_hit_uvs,
                 all_hit_material_indecies,
                 all_back_facing
             )
@@ -163,6 +176,7 @@ class MTTriangleGroupRayGroup():
                 hit_ts,
                 hit_pts,
                 hit_normals,
+                hit_uvs,
                 hit_material_indecies,
                 back_facing
             ) = self._get_hits(ray_origins_sphere_hits, ray_dirs_sphere_hits, t_min, t_max)
@@ -176,6 +190,7 @@ class MTTriangleGroupRayGroup():
                 hit_ts,
                 hit_pts,
                 hit_normals,
+                hit_uvs,
                 hit_material_indecies,
                 back_facing
             ) = self._get_hits(
@@ -192,6 +207,7 @@ class MTTriangleGroupRayGroup():
                     hit_ts_chunk,
                     hit_pts_chunk,
                     hit_normals_chunk,
+                    hit_uvs_chunk,
                     hit_material_indecies_chunk,
                     back_facing_chunk
                 ) = self._get_hits(
@@ -204,6 +220,7 @@ class MTTriangleGroupRayGroup():
                 hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
                 hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
                 hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+                hit_uvs = numpy.concatenate((hit_uvs, hit_uvs_chunk), axis=0)
                 hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
                 back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
 
@@ -211,6 +228,7 @@ class MTTriangleGroupRayGroup():
         all_hit_ts[sphere_hits] = hit_ts
         all_hit_pts[sphere_hits] = hit_pts
         all_hit_normals[sphere_hits] = hit_normals
+        all_hit_uvs[sphere_hits] = hit_uvs
         all_hit_material_indecies[sphere_hits] = hit_material_indecies
         all_back_facing[sphere_hits] = back_facing
 
@@ -219,6 +237,7 @@ class MTTriangleGroupRayGroup():
             all_hit_ts,
             all_hit_pts,
             all_hit_normals,
+            all_hit_uvs,
             all_hit_material_indecies,
             all_back_facing
         )
@@ -375,6 +394,13 @@ class MTTriangleGroupRayGroup():
         # hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
         # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
 
+        hit_uvs = numpy.zeros((num_rays, 2), dtype=numpy.single)
+        hit_uvs[ray_hits] = (
+            self.uv0s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
+            + self.uv1s[smallest_t_indecies[ray_hits]] * Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
+            + self.uv2s[smallest_t_indecies[ray_hits]] * (1.0 - Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis] - Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
+        )
+
         # back_facing = numpy.full(num_rays, False)
         back_facing = dets[numpy.arange(num_rays), smallest_t_indecies] < 0.0
         # back_facing[sphere_hits] = dets[numpy.arange(Ts.shape[0]), smallest_t_indecies] < 0.0
@@ -382,4 +408,4 @@ class MTTriangleGroupRayGroup():
 
         hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
 
-        return ray_hits, final_ts, hit_points, hit_normals, hit_material_ids, back_facing
+        return ray_hits, final_ts, hit_points, hit_normals, hit_uvs, hit_material_ids, back_facing

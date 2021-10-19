@@ -85,6 +85,7 @@ class SphereGroupRayGroup():
             hit_ts,
             hit_pts,
             hit_normals,
+            hit_uvs,
             hit_material_indecies,
             back_facing
         ) = self._get_hits(
@@ -101,6 +102,7 @@ class SphereGroupRayGroup():
                 hit_ts_chunk,
                 hit_pts_chunk,
                 hit_normals_chunk,
+                hit_uvs_chunk,
                 hit_material_indecies_chunk,
                 back_facing_chunk
             ) = self._get_hits(
@@ -113,10 +115,11 @@ class SphereGroupRayGroup():
             hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
             hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
             hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+            hit_uvs = numpy.concatenate((hit_uvs, hit_uvs_chunk), axis=0)
             hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
             back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
 
-        return ray_hits, hit_ts, hit_pts, hit_normals, hit_material_indecies, back_facing
+        return ray_hits, hit_ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
 
     def _get_hits(self, ray_origins, ray_dirs, t_min, t_max):
 
@@ -238,6 +241,8 @@ class SphereGroupRayGroup():
         # If you don't do this you get artefacts on large spheres.
         # hit_points += hit_normals * 0.0001
 
+        hit_uvs = numpy.zeros((ray_origins.shape[0], 2), dtype=numpy.single)
+
         # Find out if any of the rays hit the back of the sphere
         cosines = numpy.einsum("ij,ij->i", hit_normals, ray_dirs)
         back_facing = cosines > 0.0
@@ -252,4 +257,4 @@ class SphereGroupRayGroup():
             -1
         )
 
-        return ray_hits, final_ts, hit_points, hit_normals, hit_material_indecies, back_facing
+        return ray_hits, final_ts, hit_points, hit_normals, hit_uvs, hit_material_indecies, back_facing

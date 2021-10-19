@@ -2188,7 +2188,35 @@ def chequerboard_test():
     #         ^ (abs(math.floor(hit_record.hit_point[2] * self.scale[2] + self.offset[2])) % 2)
     #         ):
 
+
+def uv_indexing_test():
+    # 4 Triangles
+    # 5 Rays
+    uv0s = numpy.array([
+        [1,2],
+        [3,4],
+        [5,6],
+        [7,8],
+    ])
+
+    Us = numpy.array([
+        [1,2,3,4],
+        [2,3,4,5],
+        [3,4,5,6],
+        [4,5,6,7],
+        [5,6,7,8]
+    ])
+
+    ray_hits = numpy.array([True, False, True, True, False])
+    smallest_t_indecies = numpy.array([0,1,3,2,2])
+
+    print(uv0s[smallest_t_indecies[ray_hits]])
+    print(Us[ray_hits, smallest_t_indecies[ray_hits]])
+    print(uv0s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
+
+
 main.main()
+# uv_indexing_test()
 # chequerboard_test()
 # mttriangle_filter_speed_test()
 # index_test()
