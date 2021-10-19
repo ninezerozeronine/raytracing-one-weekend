@@ -432,6 +432,7 @@ def numpy_bounce_render():
                     ray_directions[active_ray_indecies[material_matches]],
                     hit_pts[material_matches],
                     hit_normals[material_matches],
+                    hit_uvs[material_matches], 
                     back_facing[material_matches]
                 )
 
@@ -1728,6 +1729,9 @@ def ray_group_triangle_group_bunny_scene():
     bunny_mat = materials.NumpyPointOnHemiSphereMaterial(
         numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
     )
+    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+        numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
+    )
     metal_mat = materials.NumpyMetalMaterial(
         numpy.array([0.8, 0.8, 0.8], dtype=numpy.single),
         0.0
@@ -1735,7 +1739,7 @@ def ray_group_triangle_group_bunny_scene():
 
     material_map = {
         0: ground_mat,
-        1: bunny_mat,
+        1: tex_mat,
         2: metal_mat,
     }
 

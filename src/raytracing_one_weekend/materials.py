@@ -179,7 +179,7 @@ class NumpyPointOnHemiSphereMaterial():
 
 
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
 
         # Generate points in unit hemispheres pointing in the normal direction
         ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
@@ -199,6 +199,45 @@ class NumpyPointOnHemiSphereMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
+
+class NumpyPointOnHemiSphereTextureMaterial():
+    def __init__(self, colour):
+        """
+        Initialise the object.
+
+        Args:
+            colour (numpy.array): An RGB 0-1 array representing the
+                colour of the material.
+        """
+        self.colour = colour
+
+
+
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
+
+        # Generate points in unit hemispheres pointing in the normal direction
+        ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
+
+        # Reverse any points in the wrong hemisphere
+        cosine_angles = numpy.einsum("ij,ij->i", ray_dirs, hit_normals)
+        facing_wrong_way = cosine_angles < 0.0
+        ray_dirs[facing_wrong_way] *= -1.0
+
+        # Bounce ray origins are the hit points we fed in
+        # Bounce ray directions are the random points in the hemisphere.
+
+        col_choice = hit_uvs[:, 0] > 0.5
+        hit_cols = numpy.where(
+            col_choice[:, numpy.newaxis],
+            self.colour,
+            numpy.array([0.5, 0.5, 0.5])
+        )
+
+        absorbtions = numpy.full((hit_points.shape[0]), False)
+
+        return hit_points, ray_dirs, hit_cols, absorbtions
+
+
 class NumpyPointOnHemiSphereCheckerboardMaterial():
     def __init__(self, scale, offset, colour_a, colour_b):
         """
@@ -211,7 +250,7 @@ class NumpyPointOnHemiSphereCheckerboardMaterial():
         self.colour_a = colour_a
         self.colour_b = colour_b
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
 
         # Generate points in unit hemispheres pointing in the normal direction
         ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
@@ -427,7 +466,7 @@ class NumpyNormalToRGBMaterial():
     point.
     """
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
 
         # Generate points in unit hemispheres pointing in the normal direction
         ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
@@ -507,7 +546,7 @@ class NumpyNormalToDiscreteRGBMaterial():
     point.
     """
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
 
         # Generate points in unit hemispheres pointing in the normal direction
         ray_dirs = numpy_random_unit_vecs(hit_points.shape[0])
@@ -633,7 +672,7 @@ class NumpyMetalMaterial():
         self.fuzziness = fuzziness
 
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
         reflected_dirs = numpy_reflect(hit_raydirs, hit_normals)
 
         hit_cols = numpy.full((hit_points.shape[0], 3), self.colour, dtype=numpy.single)
@@ -815,7 +854,7 @@ class NumpyDielectricMaterial():
 
         self.ior = index_of_refraction
 
-    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_backfaces):
+    def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
         """
 
         """
