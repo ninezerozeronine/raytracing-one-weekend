@@ -13,6 +13,7 @@ from functools import reduce
 import numpy
 import humanize
 
+from PIL import Image
 
 RNG = numpy.random.default_rng()
 
@@ -2215,7 +2216,68 @@ def uv_indexing_test():
     print(uv0s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
 
 
+def texture_test():
+    texture = Image.open("bunnyTexture.tif")
+    print(texture.mode)
+    pixels = numpy.array(texture.getdata(), dtype=numpy.single).reshape((texture.size[1], texture.size[0], 4))
+    pixels = numpy.flipud(pixels)
+    pixels = pixels[:, :, 0:3]
+    pixels /= 255.0
+    print(pixels.shape)
+    print(pixels.dtype)
+    print(pixels[0][0])
+
+    uvs = numpy.array(
+        [
+            [0,0],
+            [0.35,0.35],
+            [0.66,0.66],
+            [1,1],
+        ],
+        dtype=numpy.single
+    )
+    numpy.clip(uvs, 0.0, 1.0, out=uvs)
+    discretised_uvs = uvs * 511.0
+    discretised_uvs = discretised_uvs.astype(numpy.intc)
+    print(discretised_uvs)
+
+    indexes = numpy.array([
+        [0, 1],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+        [0, 2],
+    ])
+
+    pixels = numpy.array([
+        [
+            [1,2,3],
+            [2,3,4],
+            [3,4,5]
+        ],
+        [
+            [4,5,6],
+            [5,6,7],
+            [6,7,8]
+        ],
+    ])
+
+    print(pixels[
+        numpy.array([1,1,1,1,1]),
+        numpy.array([0,1,2,0,1]),
+    ])
+    # print(pixels[tuple([[0,1], [0,2], [0,2], [0,2]])])
+    print(pixels[
+        indexes[:,0],
+        indexes[:,1]
+    ])
+
 main.main()
+# texture_test()
 # uv_indexing_test()
 # chequerboard_test()
 # mttriangle_filter_speed_test()

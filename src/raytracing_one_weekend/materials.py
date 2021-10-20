@@ -7,9 +7,12 @@ import random
 import math
 
 import numpy
+from PIL import Image
 
 from .ray import Ray
 from . import renderable
+
+
 
 RNG = numpy.random.default_rng()
 AXIS_COLOUR_PAIRS = [
@@ -31,7 +34,6 @@ AXIS_COLOUR_PAIRS = [
     # -Z : Cyan
     (numpy.array([0.0, 0.0, -1.0], dtype=numpy.single), numpy.array([0.0, 1.0, 1.0], dtype=numpy.single)),
 ]
-
 
 
 class PointOnHemiSphereCheckerboardMaterial():
@@ -199,19 +201,36 @@ class NumpyPointOnHemiSphereMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-
 class NumpyPointOnHemiSphereTextureMaterial():
-    def __init__(self, colour):
+    def __init__(self, texture_path):
         """
         Initialise the object.
 
         Args:
-            colour (numpy.array): An RGB 0-1 array representing the
-                colour of the material.
+            texture_path (str): Path to texture
         """
-        self.colour = colour
+        texture = Image.open(texture_path)
+        width = texture.width
+        height = texture.height
+        self.smallest_side = float(min((width, height)))
 
+        tex_mode = texture.mode
+        tex_mode_map = {
+            "RGB": 3,
+            "RGBA": 4
+        }
+        if tex_mode not in tex_mode_map:
+            raise Exception(f"Unsupported texture image mode: {tex_mode}")
 
+        self.texture_pixels = numpy.array(texture.getdata(), dtype=numpy.single)
+        self.texture_pixels /= 255.0
+        self.texture_pixels = self.texture_pixels.reshape(
+            (height, width, tex_mode_map[tex_mode])
+        )
+        self.texture_pixels = self.texture_pixels[:, :, 0:3]
+
+        self.texture_pixels = numpy.flipud(self.texture_pixels)
+        # self.texture_pixels = numpy.fliplr(self.texture_pixels)
 
     def scatter(self, hit_raydirs, hit_points, hit_normals, hit_uvs, hit_backfaces):
 
@@ -226,12 +245,21 @@ class NumpyPointOnHemiSphereTextureMaterial():
         # Bounce ray origins are the hit points we fed in
         # Bounce ray directions are the random points in the hemisphere.
 
-        col_choice = hit_uvs[:, 0] > 0.5
-        hit_cols = numpy.where(
-            col_choice[:, numpy.newaxis],
-            self.colour,
-            numpy.array([0.5, 0.5, 0.5])
-        )
+        clipped_uvs = numpy.clip(hit_uvs, 0.0, 1.0)
+        mapped_uvs = clipped_uvs * (self.smallest_side - 1.0)
+        discretised_uvs = mapped_uvs.astype(numpy.intc)
+        hit_cols = self.texture_pixels[
+            discretised_uvs[:, 1],
+            discretised_uvs[:, 0],
+        ]
+
+        # # col_choice = hit_uvs[:, 0] > 0.5
+        # col_choice = hit_uvs[:, 1] > 0.5
+        # hit_cols = numpy.where(
+        #     col_choice[:, numpy.newaxis],
+        #     numpy.array([0.1, 0.8, 0.2]),
+        #     numpy.array([0.2, 0.1, 0.1])
+        # )
 
         absorbtions = numpy.full((hit_points.shape[0]), False)
 

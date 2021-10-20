@@ -328,7 +328,8 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
 
@@ -1730,7 +1731,9 @@ def ray_group_triangle_group_bunny_scene():
         numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
     )
     tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
-        numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
+        "bunnyTexture.tif"
+        # "horizontalLineStrengthMap.jpg"
+        # "flagTexture.tif"
     )
     metal_mat = materials.NumpyMetalMaterial(
         numpy.array([0.8, 0.8, 0.8], dtype=numpy.single),
@@ -1798,7 +1801,88 @@ def ray_group_triangle_group_bunny_scene():
         2
     )
 
+    return camera, [tri_grp, sphere_ray_group], material_map
 
+
+def texture_test_scene():
+    cam_pos = numpy.array([2.5, 2.5, 2.5])
+    cam_lookat = numpy.array([0.5, 0.0, 0.5])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+        # "bunnyTexture.tif"
+        # "horizontalLineStrengthMap.jpg"
+        # "flagTexture.tif"
+        "uv_test.jpg"
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: tex_mat,
+    }
+
+    tri_grp = MTTriangleGroupRayGroup(1)
+
+    # obj_mesh = OBJTriMesh()
+    # obj_mesh.read("square.obj")
+
+    # smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    # for triangle in obj_mesh.faces:
+    #     tri_grp.add_triangle(
+    #         numpy.array([
+    #             obj_mesh.vertices[triangle[0][0]][0],
+    #             obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+    #             obj_mesh.vertices[triangle[0][0]][2],
+    #         ]),
+    #         numpy.array([
+    #             obj_mesh.vertices[triangle[1][0]][0],
+    #             obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+    #             obj_mesh.vertices[triangle[1][0]][2],
+    #         ]),
+    #         numpy.array([
+    #             obj_mesh.vertices[triangle[2][0]][0],
+    #             obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+    #             obj_mesh.vertices[triangle[2][0]][2],
+    #         ]),
+    #         uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+    #         uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+    #         uv2=numpy.array(obj_mesh.uvs[triangle[2][1]])
+    #     )
+
+    tri_grp.add_triangle(
+        numpy.array([0, 0, 1], dtype=numpy.single),
+        numpy.array([1, 0, 1], dtype=numpy.single),
+        numpy.array([0, 0, 0], dtype=numpy.single),
+        # uv0=numpy.array([0, 0], dtype=numpy.single),
+        # uv1=numpy.array([1, 0], dtype=numpy.single),
+        # uv2=numpy.array([0, 1], dtype=numpy.single),
+        # uv1=numpy.array([0, 0], dtype=numpy.single),
+        # uv2=numpy.array([1, 0], dtype=numpy.single),
+        # uv0=numpy.array([0, 1], dtype=numpy.single)
+        uv2=numpy.array([0, 0], dtype=numpy.single),
+        uv0=numpy.array([1, 0], dtype=numpy.single),
+        uv1=numpy.array([0, 1], dtype=numpy.single)
+    )
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
 
     return camera, [tri_grp, sphere_ray_group], material_map
 
