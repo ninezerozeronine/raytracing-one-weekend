@@ -394,11 +394,16 @@ class MTTriangleGroupRayGroup():
         # hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
         # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
 
+        # print("Us:")
+        # print(Us)
+        # print("Vs:")
+        # print(Vs)
+
         hit_uvs = numpy.zeros((num_rays, 2), dtype=numpy.single)
         hit_uvs[ray_hits] = (
-            self.uv0s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
-            + self.uv1s[smallest_t_indecies[ray_hits]] * Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
-            + self.uv2s[smallest_t_indecies[ray_hits]] * (1.0 - Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis] - Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
+            self.uv0s[smallest_t_indecies[ray_hits]] * (1.0 - Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis] - Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
+            + self.uv1s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
+            + self.uv2s[smallest_t_indecies[ray_hits]] * Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
         )
 
         # back_facing = numpy.full(num_rays, False)

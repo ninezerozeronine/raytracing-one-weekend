@@ -27,7 +27,8 @@ from raytracing_one_weekend import (
     sphere, sphere_group,
     ray,
     renderable,
-    materials
+    materials,
+    mttriangle_group_ray_group
 )
 
 
@@ -2276,7 +2277,74 @@ def texture_test():
         indexes[:,1]
     ])
 
+
+def uv_interpolate_test():
+    tri_grp = mttriangle_group_ray_group.MTTriangleGroupRayGroup(0)
+    # tri_grp.add_triangle(
+    #     numpy.array([0, 0, 1], dtype=numpy.single),
+    #     numpy.array([1, 0, 1], dtype=numpy.single),
+    #     numpy.array([0, 0, 0], dtype=numpy.single),
+    #     uv0=numpy.array([0, 0], dtype=numpy.single),
+    #     uv1=numpy.array([1, 0], dtype=numpy.single),
+    #     uv2=numpy.array([0, 1], dtype=numpy.single),
+    # )
+    # ray_origins = numpy.array(
+    #     [
+    #         [0.25, 1.0, 0.75]
+    #     ],
+    #     dtype=numpy.single
+    # )
+    # ray_dirs = numpy.array(
+    #     [
+    #         [0, -1, 0]
+    #     ],
+    #     dtype=numpy.single
+    # )
+
+    tri_grp.add_triangle(
+        numpy.array([-1, -1, -3], dtype=numpy.single),
+        numpy.array([1, -1, -3], dtype=numpy.single),
+        numpy.array([0, 1, -3], dtype=numpy.single),
+        uv0=numpy.array([0, 0], dtype=numpy.single),
+        uv1=numpy.array([1, 0], dtype=numpy.single),
+        uv2=numpy.array([0.5, 1], dtype=numpy.single),
+    )
+    ray_origins = numpy.array(
+        [
+            [0.0, 0.0, 0.0]
+        ],
+        dtype=numpy.single
+    )
+    ray_dirs = numpy.array(
+        [
+            [0, 0, -1]
+        ],
+        dtype=numpy.single
+    )
+
+
+    t_min = 0.0001
+    t_max = 5000.0
+    (
+        ray_hits,
+        ts,
+        points,
+        normals,
+        uvs,
+        material_ids,
+        back_facing
+    ) = tri_grp._get_hits(ray_origins, ray_dirs, t_min, t_max)
+
+    print("Hits:")
+    print(ray_hits)
+    print("ts:")
+    print(ts)
+    print("uvs")
+    print(uvs)
+
+
 main.main()
+# uv_interpolate_test()
 # texture_test()
 # uv_indexing_test()
 # chequerboard_test()

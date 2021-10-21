@@ -24,10 +24,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 10
+PIXEL_SAMPLES = 40
 MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -328,8 +328,8 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
-    camera, object_groups, material_map = texture_test_scene()
+    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
 
@@ -1716,7 +1716,7 @@ def non_numpy_triangle_noise_cmp_scene():
 
 def ray_group_triangle_group_bunny_scene():
     cam_pos = numpy.array([-2.0, 3.5, 8.0])
-    cam_lookat = numpy.array([-0.5, 1.7, 0.0])
+    cam_lookat = numpy.array([-2.2, 1.7, 0.0])
     # cam_pos = numpy.array([5.0, 5.0, 5.0])
     # cam_lookat = numpy.array([0.0, 0.5, 0.0])
     focus_dist = 10
@@ -1795,8 +1795,8 @@ def ray_group_triangle_group_bunny_scene():
 
     # Sphere in bunny
     sphere_ray_group.add_sphere(
-        numpy.array([1, 2.0, 0.5], dtype=numpy.single),
-        1.5,
+        numpy.array([-4.4, 2.0, -1.5], dtype=numpy.single),
+        1.7,
         numpy.array([1,0,0], dtype=numpy.single),
         2
     )
@@ -1817,6 +1817,7 @@ def texture_test_scene():
     ground_mat = materials.NumpyPointOnHemiSphereMaterial(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
+    # Test texture is from https://ue4techarts.com/2017/04/22/how-to-iterate-textures-in-an-atlas-ue4/
     tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
         # "bunnyTexture.tif"
         # "horizontalLineStrengthMap.jpg"
@@ -1831,47 +1832,47 @@ def texture_test_scene():
 
     tri_grp = MTTriangleGroupRayGroup(1)
 
-    # obj_mesh = OBJTriMesh()
-    # obj_mesh.read("square.obj")
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("square.obj")
 
-    # smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
 
-    # for triangle in obj_mesh.faces:
-    #     tri_grp.add_triangle(
-    #         numpy.array([
-    #             obj_mesh.vertices[triangle[0][0]][0],
-    #             obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
-    #             obj_mesh.vertices[triangle[0][0]][2],
-    #         ]),
-    #         numpy.array([
-    #             obj_mesh.vertices[triangle[1][0]][0],
-    #             obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
-    #             obj_mesh.vertices[triangle[1][0]][2],
-    #         ]),
-    #         numpy.array([
-    #             obj_mesh.vertices[triangle[2][0]][0],
-    #             obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
-    #             obj_mesh.vertices[triangle[2][0]][2],
-    #         ]),
-    #         uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
-    #         uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
-    #         uv2=numpy.array(obj_mesh.uvs[triangle[2][1]])
-    #     )
+    for triangle in obj_mesh.faces:
+        tri_grp.add_triangle(
+            numpy.array([
+                obj_mesh.vertices[triangle[0][0]][0],
+                obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[0][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[1][0]][0],
+                obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[1][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[2][0]][0],
+                obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[2][0]][2],
+            ]),
+            uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]])
+        )
 
-    tri_grp.add_triangle(
-        numpy.array([0, 0, 1], dtype=numpy.single),
-        numpy.array([1, 0, 1], dtype=numpy.single),
-        numpy.array([0, 0, 0], dtype=numpy.single),
-        # uv0=numpy.array([0, 0], dtype=numpy.single),
-        # uv1=numpy.array([1, 0], dtype=numpy.single),
-        # uv2=numpy.array([0, 1], dtype=numpy.single),
-        # uv1=numpy.array([0, 0], dtype=numpy.single),
-        # uv2=numpy.array([1, 0], dtype=numpy.single),
-        # uv0=numpy.array([0, 1], dtype=numpy.single)
-        uv2=numpy.array([0, 0], dtype=numpy.single),
-        uv0=numpy.array([1, 0], dtype=numpy.single),
-        uv1=numpy.array([0, 1], dtype=numpy.single)
-    )
+    # tri_grp.add_triangle(
+    #     numpy.array([-1, -1, -3], dtype=numpy.single),
+    #     numpy.array([1, -1, -3], dtype=numpy.single),
+    #     numpy.array([0, 1, -3], dtype=numpy.single),
+    #     uv0=numpy.array([0, 0], dtype=numpy.single),
+    #     uv1=numpy.array([1, 0], dtype=numpy.single),
+    #     uv2=numpy.array([0.5, 1], dtype=numpy.single),
+    #     # uv1=numpy.array([0, 0], dtype=numpy.single),
+    #     # uv2=numpy.array([1, 0], dtype=numpy.single),
+    #     # uv0=numpy.array([0, 1], dtype=numpy.single)
+    #     # uv2=numpy.array([0, 0], dtype=numpy.single),
+    #     # uv0=numpy.array([1, 0], dtype=numpy.single),
+    #     # uv1=numpy.array([0, 1], dtype=numpy.single)
+    # )
 
     # Sphere setup
     sphere_ray_group = SphereGroupRayGroup()

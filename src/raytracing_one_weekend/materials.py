@@ -253,7 +253,7 @@ class NumpyPointOnHemiSphereTextureMaterial():
             discretised_uvs[:, 0],
         ]
 
-        # # col_choice = hit_uvs[:, 0] > 0.5
+        # col_choice = hit_uvs[:, 0] > 0.5
         # col_choice = hit_uvs[:, 1] > 0.5
         # hit_cols = numpy.where(
         #     col_choice[:, numpy.newaxis],
