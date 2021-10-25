@@ -51,7 +51,6 @@ class Camera():
         self.W = W_dir / numpy.sqrt(W_dir.dot(W_dir))
 
         # To get U, we can cross W with the up vector.
-        # Don't strictly need to normalise here as up is unit length.
         self.U = numpy.cross(numpy.array([0.0, 1.0, 0.0]), self.W)
         self.U = self.U / numpy.linalg.norm(self.U)
 

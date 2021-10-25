@@ -85,6 +85,11 @@ class Disk():
         hit_uvs = numpy.column_stack((U_components, V_components))
 
         hit_material_indecies = numpy.full(num_rays, self.material_index, dtype=numpy.ubyte)
-        back_facing = numpy.full(num_rays, False)
+        
+        cosines = numpy.einsum("ij,j->i", ray_dirs, self.normal)
+        back_facing = cosines > 0.0
+        # Flip any normals that were back facing so the normal always
+        # faces the camera
+        hit_normals[back_facing] *= -1.0
 
         return hits, ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
