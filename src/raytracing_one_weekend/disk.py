@@ -45,11 +45,6 @@ class Disk():
         self.V = numpy.cross(self.normal, self.U)
 
 
-        print(f"normal len: {numpy.linalg.norm(self.normal)}")
-        print(f"U len: {numpy.linalg.norm(self.U)}")
-        print(f"V len: {numpy.linalg.norm(self.V)}")
-
-
     def get_hits(self, ray_origins, ray_dirs, t_min, t_max):
  
         num_rays = ray_origins.shape[0]

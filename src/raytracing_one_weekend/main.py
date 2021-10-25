@@ -25,10 +25,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160
-IMG_HEIGHT = 90
+IMG_WIDTH = 160 * 4
+IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 20
+PIXEL_SAMPLES = 30
 MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -344,6 +344,7 @@ def numpy_bounce_render():
 
     print("Filling ray arrays")
     ray_origins, ray_directions = camera.get_ray_components(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES)
+    print
     ray_origins = ray_origins.reshape(-1, 3)
     ray_directions = ray_directions.reshape(-1, 3)
     ray_colours = ray_colours.reshape(-1, MAX_BOUNCES + 1, 3)
