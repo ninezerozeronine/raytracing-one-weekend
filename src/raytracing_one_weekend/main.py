@@ -19,15 +19,16 @@ from .sphere_group_ray_group import SphereGroupRayGroup
 from .mttriangle import MTTriangle
 from .mttriangle_group import MTTriangleGroup
 from .mttriangle_group_ray_group import MTTriangleGroupRayGroup
+from .disk import Disk
 from .obj_tri_mesh import OBJTriMesh
 from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 40
+PIXEL_SAMPLES = 20
 MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -328,10 +329,11 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
     # camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
+    camera, object_groups, material_map = disk_test_scene()
 
     start_time = time.perf_counter()
 
@@ -1887,6 +1889,66 @@ def texture_test_scene():
 
     return camera, [tri_grp, sphere_ray_group], material_map
 
+
+def disk_test_scene():
+
+    cam_pos = numpy.array([3.0, 3.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.0, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 40.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+    green_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.3, 0.8, 0.1], dtype=numpy.single)
+    )
+    red_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.8, 0.15, 0.2], dtype=numpy.single)
+    )
+    # Test texture is from https://ue4techarts.com/2017/04/22/how-to-iterate-textures-in-an-atlas-ue4/
+    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+        "uv_test.jpg"
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: green_mat,
+        2: red_mat,
+        3: tex_mat
+    }
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    centre = numpy.array([0,0.5,0], dtype=numpy.single)
+    radius = 0.5
+    normal = numpy.array([1,0,0], dtype=numpy.single)
+    normal = normal / numpy.linalg.norm(normal)
+    normal = normal.astype(numpy.single)
+    material_index = 3
+    disk1 = Disk(centre, radius, normal, material_index)
+
+    centre = numpy.array([0,0.15,-1.5], dtype=numpy.single)
+    radius = 1.5
+    normal = numpy.array([0,1,0], dtype=numpy.single)
+    normal = normal / numpy.linalg.norm(normal)
+    normal = normal.astype(numpy.single)
+    material_index = 3
+    up = numpy.array([0,0,-1], dtype=numpy.single)
+    disk2 = Disk(centre, radius, normal, material_index, up=up)
+
+    return camera, [sphere_ray_group, disk1, disk2], material_map
 
 def get_ray_colour(ray, world, depth):
     """

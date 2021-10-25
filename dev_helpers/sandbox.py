@@ -1755,6 +1755,8 @@ def einsum_test():
     ])
     dots = numpy.einsum("j,ij->i", a, bs)
     print(dots)
+    dots = numpy.einsum("ij,j->i", bs, a)
+    print(dots)
 
 
 def mttriangle_ray_group_test():

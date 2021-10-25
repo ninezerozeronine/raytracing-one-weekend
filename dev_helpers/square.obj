@@ -25,11 +25,11 @@
 #   
 #   The points on a triangle are defined in a counter clockwise order ()
 #   
-#     3
+#     2
 #     |\
 #     | \
 #     |  \
-#     1---2
+#     0---1
 #       
 
 
