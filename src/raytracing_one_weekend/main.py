@@ -1951,6 +1951,7 @@ def disk_test_scene():
 
     return camera, [sphere_ray_group, disk1, disk2], material_map
 
+
 def get_ray_colour(ray, world, depth):
     """
     Given a ray, get the colour from the scene

@@ -72,11 +72,10 @@ class Disk():
 
         # Use the dot product to project the vector from the centre to
         # the hit point onto the U/V vector to see how much U or V makes
-        # up that position
+        # up that position.
         centre_to_pt = hit_pts - self.centre
-        # centre_to_pt /= numpy.linalg.norm(centre_to_pt, axis=1)[:, numpy.newaxis]
-        # centre_to_pt /= self.radius
         centre_to_pt = centre_to_pt.astype(numpy.single)
+        # Also normalise the U/V amount based on disk radius
         U_components = numpy.einsum("ij,j->i", centre_to_pt, self.U / self.radius)
         V_components = numpy.einsum("ij,j->i", centre_to_pt, self.V / self.radius)
         # Offset the UV coord so 0.5, 0.5 is at the centre of the disk
@@ -89,7 +88,7 @@ class Disk():
         cosines = numpy.einsum("ij,j->i", ray_dirs, self.normal)
         back_facing = cosines > 0.0
         # Flip any normals that were back facing so the normal always
-        # faces the camera
+        # faces the ray origin
         hit_normals[back_facing] *= -1.0
 
         return hits, ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
