@@ -19,7 +19,7 @@ RNG = numpy.random.default_rng()
 
 sys.path.append(os.path.abspath("../src"))
 
-from raytracing_one_weekend import (
+from weekend_raytracer import (
     main,
     mttriangle_group,
     obj_tri_mesh,
