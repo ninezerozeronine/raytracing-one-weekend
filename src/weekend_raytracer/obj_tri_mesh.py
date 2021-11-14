@@ -5,7 +5,7 @@ https://all3dp.com/1/obj-file-format-3d-printing-cad/
 
 Note that indecies of things in the OBj file start at 1 - yay!
 """
-
+import numpy
 
 class OBJTriMesh():
     """
@@ -23,6 +23,49 @@ class OBJTriMesh():
         self.vertex_normals = []
         self.uvs = []
         self.faces = []
+
+    def get_smooth_vertex_normal(self, vertex_index):
+        """
+        The points are defined in a counter clockwise order looking from
+        the direction the normal points in:
+
+          2
+          |\
+        B | \
+          |  \
+          0---1
+            A
+
+        A = 0 -> 1
+        B = 0 -> 2
+        C = AxB
+
+        A is X-like, B is Y-like and C is Z-like from a right handed
+        coordinate system.
+        """
+        adjacent_normals = None
+        for face in self.faces:
+            for face_pt in face:
+                if vertex_index == face_pt[0]:
+                    # Calculate normal of face
+                    A = (
+                        numpy.array(self.vertices[face[1][0]], dtype=numpy.single)
+                        - numpy.array(self.vertices[face[0][0]], dtype=numpy.single)
+                    )
+                    B = (
+                        numpy.array(self.vertices[face[2][0]], dtype=numpy.single)
+                        - numpy.array(self.vertices[face[0][0]], dtype=numpy.single)
+                    )
+                    normal = numpy.cross(A, B)
+                    normal /= numpy.linalg.norm(normal)
+                    if adjacent_normals is None:
+                        adjacent_normals = numpy.array([normal], dtype=numpy.single)
+                    else:
+                        adjacent_normals = numpy.append(adjacent_normals, [normal], axis=0)
+
+        average_normal = numpy.mean(adjacent_normals, axis=0)
+        average_normal /= numpy.linalg.norm(average_normal)
+        return average_normal
 
     def read(self, filepath):
 
@@ -70,7 +113,9 @@ class OBJTriMesh():
 
             # Process Face
             if tokens[0] == "f":
-                self.faces.append(self._process_face(line_no, line, tokens))
+                face = self._process_face(line_no, line, tokens)
+                if face is not None:
+                    self.faces.append(face)
                 continue
 
         print(f"Read {len(self.vertices)} vertices, {len(self.vertex_normals)} vertex normals, {len(self.uvs)} UVs and {len(self.faces)} faces.")
@@ -79,12 +124,7 @@ class OBJTriMesh():
         # Skip if not a triangle
         if len(tokens) != 4:
             print(f"Non triangular face on line {line_no}: {line}")
-            return [
-                (-1, -1, -1),
-                (-1, -1, -1),
-                (-1, -1, -1),
-            ]
-
+            return None
         point_defs = tokens[1:]
         # print(point_defs)
         face_points = []

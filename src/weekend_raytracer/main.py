@@ -33,7 +33,7 @@ MAX_BOUNCES = 5
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
-MAX_DEPTH = 4
+
 
 
 def generate_test_image():
@@ -90,6 +90,8 @@ def render():
     """
     Do the rendering of the image.
     """
+
+    MAX_DEPTH = 4
 
     # world, camera = dielectric_debug_scene()
     # world, camera = non_numpy_triangle_noise_cmp_scene()
@@ -330,10 +332,12 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
     # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    camera, object_groups, material_map = blender_cylinder_vert_normals_test_scene()
     # camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
-    camera, object_groups, material_map = disk_test_scene()
+    # camera, object_groups, material_map = disk_test_scene()
+    # camera, object_groups, material_map = smooth_normal_test_scene()
 
     start_time = time.perf_counter()
 
@@ -383,7 +387,7 @@ def numpy_bounce_render():
                     ray_origins[active_ray_indecies],
                     ray_directions[active_ray_indecies],
                     0.001,
-                    5000.0
+                    1000.0
                 )
 
                 ray_hits = ray_hits | tmp_ray_hits
@@ -1727,9 +1731,17 @@ def ray_group_triangle_group_bunny_scene():
     horizontal_fov = 53.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    # ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    # )
+
+    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([2.0, 2.0, 2.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([0.5, 0.5, 0.5]),
+        numpy.array([0.8, 0.8, 0.8]),
     )
+
     bunny_mat = materials.NumpyPointOnHemiSphereMaterial(
         numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
     )
@@ -1749,7 +1761,7 @@ def ray_group_triangle_group_bunny_scene():
         2: metal_mat,
     }
 
-    tri_grp = MTTriangleGroupRayGroup(1)
+    tri_grp = MTTriangleGroupRayGroup(2)
 
     # Ground triangle
     # tri_grp.add_triangle(
@@ -1782,7 +1794,10 @@ def ray_group_triangle_group_bunny_scene():
             ]),
             uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
             uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
-            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]])
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]]),
+            normal0=obj_mesh.get_smooth_vertex_normal(triangle[0][0]),
+            normal1=obj_mesh.get_smooth_vertex_normal(triangle[1][0]),
+            normal2=obj_mesh.get_smooth_vertex_normal(triangle[2][0])
         )
 
     # Sphere setup
@@ -1796,13 +1811,13 @@ def ray_group_triangle_group_bunny_scene():
         0
     )
 
-    # Sphere in bunny
-    sphere_ray_group.add_sphere(
-        numpy.array([-4.4, 2.0, -1.5], dtype=numpy.single),
-        1.7,
-        numpy.array([1,0,0], dtype=numpy.single),
-        2
-    )
+    # Sphere
+    # sphere_ray_group.add_sphere(
+    #     numpy.array([-4.4, 2.0, -1.5], dtype=numpy.single),
+    #     1.7,
+    #     numpy.array([1,0,0], dtype=numpy.single),
+    #     2
+    # )
 
     return camera, [tri_grp, sphere_ray_group], material_map
 
@@ -1889,6 +1904,171 @@ def texture_test_scene():
     )
 
     return camera, [tri_grp, sphere_ray_group], material_map
+
+
+def smooth_normal_test_scene():
+    cam_pos = numpy.array([2.5, 2.5, 2.5])
+    cam_lookat = numpy.array([0.5, 0.5, 0.5])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([4.0, 4.0, 4.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([0.5, 0.5, 0.5]),
+        numpy.array([0.8, 0.8, 0.8]),
+    )
+
+    # normal_mat = materials.NumpyNormalToRGBMaterial()
+
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
+        0.0
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: metal_mat,
+    }
+
+    tri_grp = MTTriangleGroupRayGroup(1)
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("angled_tris_standing.obj")
+
+    smallest_y = min([vertex[1] for vertex in obj_mesh.vertices])
+
+    for triangle in obj_mesh.faces:
+        tri_grp.add_triangle(
+            numpy.array([
+                obj_mesh.vertices[triangle[0][0]][0],
+                obj_mesh.vertices[triangle[0][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[0][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[1][0]][0],
+                obj_mesh.vertices[triangle[1][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[1][0]][2],
+            ]),
+            numpy.array([
+                obj_mesh.vertices[triangle[2][0]][0],
+                obj_mesh.vertices[triangle[2][0]][1] - smallest_y,
+                obj_mesh.vertices[triangle[2][0]][2],
+            ]),
+            uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]]),
+            normal0=obj_mesh.get_smooth_vertex_normal(triangle[0][0]),
+            normal1=obj_mesh.get_smooth_vertex_normal(triangle[1][0]),
+            normal2=obj_mesh.get_smooth_vertex_normal(triangle[2][0])
+        )
+
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    return camera, [tri_grp, sphere_ray_group], material_map
+
+
+def blender_cylinder_vert_normals_test_scene():
+    cam_pos = numpy.array([1.5, 1.5, 1.5])
+    cam_lookat = numpy.array([-0.25, 0.0, -0.25])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 35.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([4.0, 4.0, 4.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([1.0, 0.3, 0.3]),
+        numpy.array([0.2, 1.0, 0.3]),
+    )
+
+    normal_mat = materials.NumpyNormalToRGBMaterial()
+
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
+        0.0
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: checker_mat,
+        2: metal_mat,
+        3: normal_mat
+    }
+
+    tri_grp = MTTriangleGroupRayGroup(2)
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("cylinder_smooth.obj")
+
+    for triangle in obj_mesh.faces:
+        tri_grp.add_triangle(
+            numpy.array(obj_mesh.vertices[triangle[0][0]]),
+            numpy.array(obj_mesh.vertices[triangle[1][0]]),
+            numpy.array(obj_mesh.vertices[triangle[2][0]]),
+            uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]]),
+            normal0=numpy.array(obj_mesh.vertex_normals[triangle[0][2]]),
+            normal1=numpy.array(obj_mesh.vertex_normals[triangle[1][2]]),
+            normal2=numpy.array(obj_mesh.vertex_normals[triangle[2][2]])
+        )
+
+    tri_grp2 = MTTriangleGroupRayGroup(2)
+
+    obj_mesh2 = OBJTriMesh()
+    obj_mesh2.read("cylinder_faceted.obj")
+
+    for triangle in obj_mesh2.faces:
+        tri_grp2.add_triangle(
+            numpy.array(obj_mesh2.vertices[triangle[0][0]]),
+            numpy.array(obj_mesh2.vertices[triangle[1][0]]),
+            numpy.array(obj_mesh2.vertices[triangle[2][0]]),
+            uv0=numpy.array(obj_mesh2.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh2.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh2.uvs[triangle[2][1]]),
+            normal0=numpy.array(obj_mesh2.vertex_normals[triangle[0][2]]),
+            normal1=numpy.array(obj_mesh2.vertex_normals[triangle[1][2]]),
+            normal2=numpy.array(obj_mesh2.vertex_normals[triangle[2][2]])
+        )
+
+
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        0
+    )
+
+    # return camera, [tri_grp, tri_grp2, sphere_ray_group], material_map
+    return camera, [sphere_ray_group], material_map
+
 
 
 def disk_test_scene():

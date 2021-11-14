@@ -1,0 +1,61 @@
+# This file uses centimeters as units for non-parametric coordinates.
+# All indexes are 1 based
+
+#   This is the axis, looking top down from +Y
+#   
+#   x-->   X
+#   |
+#   v
+#   
+#   Z
+
+
+#       Y axis
+#          |
+#          V
+#
+#          3
+#          O           
+#         /|\            
+#        / |  \         
+#        / |    \        
+#       /  |       \    
+#      /   O--------O 2  <- X Axis
+#      /  /1
+#     / /                 
+#    //               
+#   O                
+#   4                  
+    
+
+#   
+#   
+#   The points on a triangle are defined in a counter clockwise order ()
+#   
+#     2
+#     |\
+#     | \
+#     |  \
+#     0---1
+#       
+
+
+v 0.000000 0.000000 0.000000
+v 1.000000 0.000000 0.000000
+v 0.000000 1.000000 0.000000
+v 0.000000 0.000000 1.000000
+
+vt 0.000000 0.000000
+vt 1.000000 0.000000
+vt 0.000000 1.000000
+
+vn 0.000000 0.000000 1.000000
+vn 1.000000 0.000000 0.000000
+
+# f vert-index / uv-index / normal-index
+
+# XY
+f 1/1/1 2/2/1 3/3/1
+
+# YZ
+f 1/1/2 3/3/2 4/2/2

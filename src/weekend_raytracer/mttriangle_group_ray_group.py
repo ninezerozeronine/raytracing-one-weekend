@@ -44,7 +44,18 @@ class MTTriangleGroupRayGroup():
         self.bounds_radius = None
         self.num_triangles = 0
 
-    def add_triangle(self, pt0, pt1, pt2, uv0=(0.0, 0.0), uv1=(0.0, 0.0), uv2=(0.0, 0.0)):
+    def add_triangle(
+            self,
+            pt0,
+            pt1,
+            pt2,
+            uv0=(0.0, 0.0),
+            uv1=(0.0, 0.0),
+            uv2=(0.0, 0.0),
+            normal0=(0,1,0),
+            normal1=(0,1,0),
+            normal2=(0,1,0)
+        ):
         """
         Add a triangle to the group
         """
@@ -63,6 +74,10 @@ class MTTriangleGroupRayGroup():
             self.uv1s = numpy.array([uv1], dtype=numpy.single)
             self.uv2s = numpy.array([uv2], dtype=numpy.single)
 
+            self.normal0s = numpy.array([normal0], dtype=numpy.single)
+            self.normal1s = numpy.array([normal1], dtype=numpy.single)
+            self.normal2s = numpy.array([normal2], dtype=numpy.single)
+
             self.As = numpy.array([A], dtype=numpy.single)
             self.Bs = numpy.array([B], dtype=numpy.single)
 
@@ -75,6 +90,10 @@ class MTTriangleGroupRayGroup():
             self.uv0s = numpy.append(self.uv0s, numpy.array([uv0], dtype=numpy.single), axis=0)
             self.uv1s = numpy.append(self.uv1s, numpy.array([uv1], dtype=numpy.single), axis=0)
             self.uv2s = numpy.append(self.uv2s, numpy.array([uv2], dtype=numpy.single), axis=0)
+
+            self.normal0s = numpy.append(self.normal0s, numpy.array([normal0], dtype=numpy.single), axis=0)
+            self.normal1s = numpy.append(self.normal1s, numpy.array([normal1], dtype=numpy.single), axis=0)
+            self.normal2s = numpy.append(self.normal2s, numpy.array([normal2], dtype=numpy.single), axis=0)
 
             self.As = numpy.append(self.As, numpy.array([A], dtype=numpy.single), axis=0)
             self.Bs = numpy.append(self.Bs, numpy.array([B], dtype=numpy.single), axis=0)
@@ -390,9 +409,19 @@ class MTTriangleGroupRayGroup():
         # hit_points[sphere_hits] = ray_origins[sphere_hits] + ray_dirs[sphere_hits] * smallest_ts[..., numpy.newaxis]
 
         hit_normals = numpy.zeros((num_rays, 3), dtype=numpy.single)
-        hit_normals[ray_hits] = self.normals[smallest_t_indecies[ray_hits]]
+        # hit_normals[ray_hits] = self.normals[smallest_t_indecies[ray_hits]]
         # hit_normals[sphere_hits] = self.normals[smallest_t_indecies]
         # hit_normals[sphere_hits] = self.normals[triangle_hits][smallest_t_indecies]
+
+        # print(f"self.normal0s[smallest_t_indecies[ray_hits]].shape: {self.normal0s[smallest_t_indecies[ray_hits]].shape}")
+
+        hit_normals[ray_hits] = (
+            self.normal0s[smallest_t_indecies[ray_hits]] * (1.0 - Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis] - Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis])
+            + self.normal1s[smallest_t_indecies[ray_hits]] * Us[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
+            + self.normal2s[smallest_t_indecies[ray_hits]] * Vs[ray_hits, smallest_t_indecies[ray_hits], numpy.newaxis]
+        )
+
+        hit_normals[ray_hits] /= numpy.linalg.norm(hit_normals[ray_hits], axis=1)[:, numpy.newaxis]
 
         # print("Us:")
         # print(Us)
