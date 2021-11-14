@@ -29,7 +29,7 @@ IMG_WIDTH = 160 * 4
 IMG_HEIGHT = 90 * 4
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
 PIXEL_SAMPLES = 30
-MAX_BOUNCES = 5
+MAX_BOUNCES = 10
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
 RNG = numpy.random.default_rng()
@@ -332,7 +332,8 @@ def numpy_bounce_render():
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
     # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
-    camera, object_groups, material_map = blender_cylinder_vert_normals_test_scene()
+    # camera, object_groups, material_map = blender_cylinder_vert_normals_test_scene()
+    camera, object_groups, material_map = sphere_types_test_scene()
     # camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
@@ -2068,6 +2069,103 @@ def blender_cylinder_vert_normals_test_scene():
 
     # return camera, [tri_grp, tri_grp2, sphere_ray_group], material_map
     return camera, [sphere_ray_group], material_map
+
+
+def sphere_types_test_scene():
+    cam_pos = numpy.array([0, 3, 7])
+    cam_lookat = numpy.array([0.0, 1, 0.0])
+    # cam_pos = numpy.array([5.0, 5.0, 5.0])
+    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10
+    aperture = 0.0
+    horizontal_fov = 50.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
+    )
+
+    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+        numpy.array([4.0, 4.0, 4.0]),
+        numpy.array([0.0, 0.0, 0.0]),
+        numpy.array([1.0, 0.3, 0.3]),
+        numpy.array([0.2, 1.0, 0.3]),
+    )
+
+    normal_mat = materials.NumpyNormalToRGBMaterial()
+
+    metal_mat = materials.NumpyMetalMaterial(
+        numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
+        0.0
+    )
+
+    material_map = {
+        0: ground_mat,
+        1: checker_mat,
+        2: metal_mat,
+        3: normal_mat
+    }
+
+    smooth_icosphere = MTTriangleGroupRayGroup(2)
+
+    obj_mesh = OBJTriMesh()
+    obj_mesh.read("smooth-icosphere.obj")
+
+    for triangle in obj_mesh.faces:
+        smooth_icosphere.add_triangle(
+            numpy.array(obj_mesh.vertices[triangle[0][0]]),
+            numpy.array(obj_mesh.vertices[triangle[1][0]]),
+            numpy.array(obj_mesh.vertices[triangle[2][0]]),
+            uv0=numpy.array(obj_mesh.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh.uvs[triangle[2][1]]),
+            normal0=numpy.array(obj_mesh.vertex_normals[triangle[0][2]]),
+            normal1=numpy.array(obj_mesh.vertex_normals[triangle[1][2]]),
+            normal2=numpy.array(obj_mesh.vertex_normals[triangle[2][2]])
+        )
+
+    faceted_icosphere = MTTriangleGroupRayGroup(2)
+
+    obj_mesh2 = OBJTriMesh()
+    obj_mesh2.read("faceted-icosphere.obj")
+
+    for triangle in obj_mesh2.faces:
+        faceted_icosphere.add_triangle(
+            numpy.array(obj_mesh2.vertices[triangle[0][0]]),
+            numpy.array(obj_mesh2.vertices[triangle[1][0]]),
+            numpy.array(obj_mesh2.vertices[triangle[2][0]]),
+            uv0=numpy.array(obj_mesh2.uvs[triangle[0][1]]),
+            uv1=numpy.array(obj_mesh2.uvs[triangle[1][1]]),
+            uv2=numpy.array(obj_mesh2.uvs[triangle[2][1]]),
+            normal0=numpy.array(obj_mesh2.vertex_normals[triangle[0][2]]),
+            normal1=numpy.array(obj_mesh2.vertex_normals[triangle[1][2]]),
+            normal2=numpy.array(obj_mesh2.vertex_normals[triangle[2][2]])
+        )
+
+
+
+    # Sphere setup
+    sphere_ray_group = SphereGroupRayGroup()
+
+    # Ground
+    sphere_ray_group.add_sphere(
+        numpy.array([0.0, -1000.0, 0.0], dtype=numpy.single),
+        1000.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        1
+    )
+
+    # Comparison sphere
+    sphere_ray_group.add_sphere(
+        numpy.array([0, 1.0, 0], dtype=numpy.single),
+        1.0,
+        numpy.array([1,0,0], dtype=numpy.single),
+        2
+    )
+
+    # return camera, [tri_grp, tri_grp2, sphere_ray_group], material_map
+    return camera, [smooth_icosphere, faceted_icosphere, sphere_ray_group], material_map
+
 
 
 
