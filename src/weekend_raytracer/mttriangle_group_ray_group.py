@@ -8,22 +8,23 @@ from . import renderable
 
 
 class MTTriangleGroupRayGroup():
-    """
+    r"""
     This is a direct implementation of The Muller-Tumbore Algoritm as descibed
     in https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection    
 
-    The points are defined in a counter clockwise order:
+    The points are defined in a counter clockwise order when looking
+    from the direction the normal should point in::
 
-      2
-      |\
-    B | \
-      |  \
-      0---1
-        A
+          2
+          |\
+        B | \
+          |  \
+          0---1
+            A
 
-    A = 0 -> 1
-    B = 0 -> 2
-    C = AxB
+        A = 0 -> 1
+        B = 0 -> 2
+        C = AxB
 
     A is X-like, B is Y-like and C is Z-like from a right handed
     coordinate system.

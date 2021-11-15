@@ -6,26 +6,19 @@
 Welcome to Weekend Raytracer's documentation!
 =============================================
 
-Equations
-
-.. math::
-
-   (a + b)^2 = a^2 + 2ab + b^2
-
-   (\vec{A} \cdot \vec{B}) \cdot \vec{C}
-
-More
-
-.. math::
-
-   A \times B
-
-   C + D
-
-
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   math_examples
+   ray_sphere_intersection
+
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Source Documentation:
+
+   software/source/weekend_raytracer
 
 
 
