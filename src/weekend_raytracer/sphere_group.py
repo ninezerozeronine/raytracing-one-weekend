@@ -7,7 +7,7 @@ import numpy
 import psutil
 import humanize
 
-class SphereGroupRayGroup():
+class SphereGroup():
     """
     Note that we don't use a base class because that slows things down.
     """
@@ -187,6 +187,7 @@ class SphereGroupRayGroup():
         # Also a grid of scalars num_rays by num_spheres in size.
         # For each ray (row) it lists (column) the value of t where that
         # ray hit the sphere. If it didn't it gets set to a large number.
+        # https://stackoverflow.com/questions/52622172/numpy-where-function-can-not-avoid-evaluate-sqrtnegative
         mask = discriminants > 0.00001
         smaller_ts = numpy.full_like(discriminants, t_max + 1.0)
         smaller_ts[mask] = -Hs[mask] - numpy.sqrt(discriminants[mask])
