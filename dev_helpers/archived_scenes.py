@@ -560,3 +560,71 @@ def checkerboard_scene():
     world.renderables.append(Sphere(numpy.array([0.0, 2.0, 0.0]), 2.0, sphere_mat))
 
     return world, camera
+
+
+def numpy_comparison_scene():
+    cam_pos = numpy.array([5.0, 2.0, 10.0])
+    cam_lookat = numpy.array([0.0, 1.0, 0.0])
+    pos_to_lookat = cam_lookat - cam_pos
+    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
+    aperture = 0.0
+    horizontal_fov = 60.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    red_mat = materials.PointOnHemiSphereMaterial(numpy.array([1.0, 0.0, 0.0]))
+    green_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.0, 1.0, 0.0]))
+    blue_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.0, 0.0, 1.0]))
+
+    world = World()
+
+    all_spheres = SphereGroup()
+    # Ground
+    all_spheres.add_sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat)
+
+    # Spheres
+    all_spheres.add_sphere(numpy.array([-5.0, 2.0, 0.0]), 2.0, red_mat)
+    all_spheres.add_sphere(numpy.array([0.0, 2.0, 0.0]), 2.0, green_mat)
+    all_spheres.add_sphere(numpy.array([5.0, 2.0, 0.0]), 2.0, blue_mat)
+
+    # Bunch of small spheres
+    for x in range(-10, 10):
+        for z in range(-10, 10):
+            mat = materials.PointOnHemiSphereMaterial(RNG.uniform(low=0.0, high=1.0, size=3))
+            all_spheres.add_sphere(
+                numpy.array([x, 0.3, z], dtype=numpy.single),
+                0.3,
+                mat
+            )
+
+    world.renderables.append(all_spheres)
+
+    return world, camera
+
+
+def dielectric_debug_scene():
+    cam_pos = numpy.array([13.0, 2.0, 3.0])
+    cam_lookat = numpy.array([0.0, 0.5, 0.0])
+    focus_dist = 10.0
+    aperture = 0.0
+    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 30.0)
+
+    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
+    glass_mat = materials.DielectricMaterial(1.5)
+
+    world = World()
+
+    # Ground
+    all_spheres = SphereGroup()
+    all_spheres.add_sphere(numpy.array([0.0, -1000.0, 0.0]), 1000.0, ground_mat)
+
+    # Brown, Glass, Metal
+    all_spheres.add_sphere(numpy.array([-4.0, 1.0, 0.0]), 1.0, ground_mat)
+    all_spheres.add_sphere(numpy.array([0.0, 1.0, 0.0]), 1.0, ground_mat)
+    all_spheres.add_sphere(numpy.array([4.0, 1.0, 0.0]), 1.0, glass_mat)
+
+    world.renderables.append(all_spheres)
+
+
+
+    return world, camera
