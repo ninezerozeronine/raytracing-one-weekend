@@ -21,10 +21,10 @@ from .camera import Camera
 from . import materials
 
 
-IMG_WIDTH = 160 * 4
-IMG_HEIGHT = 90 * 4
+IMG_WIDTH = 160
+IMG_HEIGHT = 90
 ASPECT_RATIO = IMG_WIDTH/IMG_HEIGHT
-PIXEL_SAMPLES = 30
+PIXEL_SAMPLES = 10
 MAX_BOUNCES = 10
 HORIZON_COLOUR = numpy.array([1.0, 1.0, 1.0], dtype=numpy.single)
 SKY_COLOUR = numpy.array([0.5, 0.7, 1.0], dtype=numpy.single)
@@ -83,253 +83,15 @@ def generate_image_from_data(img_data):
 
 
 def render():
-    """
-    Do the rendering of the image.
-    """
-
-    MAX_DEPTH = 4
-
-    # world, camera = dielectric_debug_scene()
-    # world, camera = non_numpy_triangle_noise_cmp_scene()
-    world, camera = bunny_scene()
-
-    img_data = {}
-    pixel_coords = (
-        (x, y) for y in range(IMG_HEIGHT) for x in range(IMG_WIDTH)
-    )
-    # pixel_coords = (
-    #     (50, 45),
-    #     (80, 75),
-    #     (110, 45),
-    #     (140, 45),
-    #     (80, 15),
-    #     (80, 45),
-    # )
-
-    start_time = time.perf_counter()
-
-    next_percentage = 0.1
-    total_rendertime_us = 0
-    min_pixeltime_us = 99999999999999
-    max_pixeltime_us = -1
-    total_pixels = IMG_HEIGHT * IMG_WIDTH
-
-    for pixel_num, coords in enumerate(pixel_coords, 1):
-        x_coord, y_coord = coords
-        start = time.perf_counter_ns()
-
-        total_colour = numpy.array([0.0, 0.0, 0.0])
-        for _ in range(PIXEL_SAMPLES):
-            x_progress = (x_coord + random()) / IMG_WIDTH
-            y_progress = (y_coord + random()) / IMG_HEIGHT
-            ray = camera.get_ray(x_progress, y_progress)
-            total_colour += get_ray_colour(ray, world, MAX_DEPTH)
-            # The squareroot is for a 2.0 gamma correction
-        img_data[(x_coord, y_coord)] = numpy.sqrt(total_colour/PIXEL_SAMPLES)
-
-        end = time.perf_counter_ns()
-        pixel_time_us = (end - start) // 1000
-
-        total_rendertime_us += pixel_time_us
-        if pixel_time_us > max_pixeltime_us:
-            max_pixeltime_ns = pixel_time_us
-        if pixel_time_us < min_pixeltime_us:
-            min_pixeltime_us = pixel_time_us
-
-        if pixel_num / total_pixels * 100 > next_percentage:
-            avg_pixel_time_us = (total_rendertime_us / pixel_num)
-            est_remaining_us = (avg_pixel_time_us * (total_pixels - pixel_num))
-            human_pixel_time = humanize.precisedelta(
-                datetime.timedelta(microseconds=avg_pixel_time_us),
-                minimum_unit="milliseconds"
-            )
-            human_remain_time = humanize.precisedelta(
-                datetime.timedelta(microseconds=est_remaining_us)
-            )
-            print(f"{next_percentage:.1f}% complete. Avg pixel:{human_pixel_time}. Est. remaining: {human_remain_time}")
-            next_percentage += 0.1
-
-    end_time = time.perf_counter()
-    print(f"Total time: {end_time - start_time:0.4f} seconds.")
-
-    return img_data
-
-
-def numpy_render():
-
-    # Cam setup
-    cam_pos = numpy.array([5.0, 2.0, 10.0])
-    cam_lookat = numpy.array([0.0, 1.0, 0.0])
-    pos_to_lookat = cam_lookat - cam_pos
-    focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
-    aperture = 0.5
-    horizontal_fov = 60.0
-    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
-
-    # Sphere setup
-    sphere_ray_group = SphereGroupRayGroup()
-
-    # Red
-    sphere_ray_group.add_sphere(
-        numpy.array([-5, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([1,0,0], dtype=numpy.single),
-    )
-
-    # Green
-    sphere_ray_group.add_sphere(
-        numpy.array([0, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([0,1,0], dtype=numpy.single),
-    )
-
-    # Blue
-    sphere_ray_group.add_sphere(
-        numpy.array([5, 2, 0], dtype=numpy.single),
-        2.0,
-        numpy.array([0,0,1], dtype=numpy.single),
-    )
-
-    # Ground
-    sphere_ray_group.add_sphere(
-        numpy.array([0, -1000, 0],  dtype=numpy.single),
-        1000.0,
-        numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    )
-
-
-    # Bunch of small spheres
-    for x in range(-10, 10):
-        for z in range(-10, 10):
-            sphere_ray_group.add_sphere(
-                numpy.array([x, 0.3, z], dtype=numpy.single),
-                0.3,
-                RNG.uniform(low=0.0, high=1.0, size=3)
-            )
-
-
-
-    # cam_pos = numpy.array([3.0, 3.0, 2.0])
-    # cam_lookat = numpy.array([0.0, 0.0, -1.0])
-    # pos_to_lookat = cam_lookat - cam_pos
-    # focus_dist = numpy.sqrt(pos_to_lookat.dot(pos_to_lookat))
-    # aperture = 2.0
-    # camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, 45.0)
-
-
-    # # # Sphere setup
-    # sphere_ray_group = SphereGroupRayGroup()
-
-    # # Red
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([-1, 0, -1], dtype=numpy.single),
-    #     0.5,
-    #     numpy.array([1,0,0], dtype=numpy.single),
-    # )
-
-    # # Blue
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([0, 0, -1], dtype=numpy.single),
-    #     0.5,
-    #     numpy.array([0,0,1], dtype=numpy.single),
-    # )
-
-    # # Yellowish
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([1, 0, -1], dtype=numpy.single),
-    #     0.5,
-    #     numpy.array([0.8,0.6,0.2], dtype=numpy.single),
-    # )
-
-    # # Ground
-    # sphere_ray_group.add_sphere(
-    #     numpy.array([0, -1000.5, 0],  dtype=numpy.single),
-    #     1000.0,
-    #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
-    # )
-
-
-    print("Generating arrays")
-    # ray_origins = numpy.zeros(
-    #     (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
-    # )
-    # ray_directions = numpy.zeros(
-    #     (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
-    # )
-    ray_colours = numpy.zeros(
-        (IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3), dtype=numpy.single
-    )
-
-    print("Filling ray arrays")
-    # for y_coord in range(IMG_HEIGHT):
-    #     print(f"{y_coord} of {IMG_HEIGHT - 1}")
-    #     for x_coord in range(IMG_WIDTH):
-    #         for sample in range(PIXEL_SAMPLES):
-    #             x_progress = (x_coord + random()) / IMG_WIDTH
-    #             y_progress = (y_coord + random()) / IMG_HEIGHT
-    #             ray = camera.get_ray(x_progress, y_progress)
-    #             ray_origins[x_coord, y_coord, sample] = ray.origin
-    #             ray_directions[x_coord, y_coord, sample] = ray.direction
-
-    ray_origins, ray_directions = camera.get_ray_components(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES)
-
-    ray_origins = ray_origins.reshape(-1, 3)
-    ray_directions = ray_directions.reshape(-1, 3)
-    ray_colours = ray_colours.reshape(-1, 3)
-
-
-    print("Getting ray hits")
-    # sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
-    #     ray_origins, ray_directions, 0.00001, 5000.0
-    # )
-
-    # Need to chunk otherwise it runs out of memory :(
-    num_chunks = 20
-    ray_origins_chunks = numpy.split(ray_origins, num_chunks)
-    ray_directions_chunks = numpy.split(ray_directions, num_chunks)
-    print(f"Chunk 1 of {num_chunks}")
-    sphere_hit_indecies, sphere_hit_ts = sphere_ray_group.get_hits(
-        ray_origins_chunks[0], ray_directions_chunks[0], 0.00001, 5000.0
-    )
-    for chunk_index in range(1,num_chunks):
-        print(f"Chunk {chunk_index+1} of {num_chunks}")
-        sphere_hit_indecies_chunk, sphere_hit_ts_chunk = sphere_ray_group.get_hits(
-            ray_origins_chunks[chunk_index], ray_directions_chunks[chunk_index], 0.00001, 5000.0
-        )
-        sphere_hit_indecies = numpy.concatenate((sphere_hit_indecies, sphere_hit_indecies_chunk), axis=0)
-        sphere_hit_ts = numpy.concatenate((sphere_hit_ts, sphere_hit_ts_chunk), axis=0)
-
-
-    ray_hits = sphere_hit_indecies > -1
-    ray_misses = sphere_hit_indecies < 0
-    ray_colours[ray_hits] = sphere_ray_group.colours[sphere_hit_indecies[ray_hits]]
-
-    # Lerp between white and blue based on mapped Y
-    ts = (ray_directions[ray_misses, 1] + 1.0) * 0.5
-    ray_colours[ray_misses] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
-
-    ray_colours_stacked = ray_colours.reshape(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES, 3)
-    ray_cols_sample_avg = numpy.mean(ray_colours_stacked, axis=2)
-    
-    print("Filling pixel data")
-    pixel_data = {}
-    for y_coord in range(IMG_HEIGHT):
-        for x_coord in range(IMG_WIDTH):
-            pixel_data[(x_coord, y_coord)] = ray_cols_sample_avg[x_coord, y_coord]
-
-    return pixel_data
-
-
-def numpy_bounce_render():
 
     # camera, object_groups, material_map = numpy_dielectric_scene()
     # camera, object_groups, material_map = numpy_glass_experiment_scene()
     # camera, object_groups, material_map = numpy_triangles_scene()
     # camera, object_groups, material_map = numpy_simple_sphere_scene()
     # camera, object_groups, material_map = numpy_one_weekend_demo_scene()
-    # camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
+    camera, object_groups, material_map = ray_group_triangle_group_bunny_scene()
     # camera, object_groups, material_map = blender_cylinder_vert_normals_test_scene()
-    camera, object_groups, material_map = sphere_types_test_scene()
+    # camera, object_groups, material_map = sphere_types_test_scene()
     # camera, object_groups, material_map = texture_test_scene()
     # camera, object_groups, material_map = numpy_bunnies_scene()
     # camera, object_groups, material_map = numpy_cow_scene()
@@ -446,6 +208,10 @@ def numpy_bounce_render():
                 ray_colours[active_ray_indecies[material_matches], bounce] = scatter_cols
                 material_absorbsions[material_matches] = scatter_absorbtions
 
+
+            # Y component is somewhere between -1 and 1. Map it into
+            # a 0 to 1 range.
+            # Lerp between horizon and sky colour based on mapped Y
             ts = (ray_directions[active_ray_indecies[ray_misses], 1] + 1.0) * 0.5
             ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
 
@@ -466,6 +232,7 @@ def numpy_bounce_render():
     pixel_data = {}
     for y_coord in range(IMG_HEIGHT):
         for x_coord in range(IMG_WIDTH):
+            # The squareroot is for a 2.0 gamma correction
             pixel_data[(x_coord, y_coord)] = sqrt_ray_cols[x_coord, y_coord]
 
     end_time = time.perf_counter()
@@ -1066,7 +833,7 @@ def ray_group_triangle_group_bunny_scene():
         2: metal_mat,
     }
 
-    tri_grp = TriangleGroup(2)
+    tri_grp = TriangleGroup(1)
 
     # Ground triangle
     # tri_grp.add_triangle(
@@ -1532,42 +1299,9 @@ def disk_test_scene():
     return camera, [sphere_group, disk1, disk2], material_map
 
 
-def get_ray_colour(ray, world, depth):
-    """
-    Given a ray, get the colour from the scene
-    """
-
-    if depth <= 0:
-        return numpy.array([0.0, 0.0, 0.0])
-
-    # Make t_min slightly larger than 0 to prune out hits where the ray
-    # hasn't travelled any distance at all.
-    # This _really_ speeds up the calculation compared to when it's set
-    # to 0. Not sure why! :(
-    hit, hit_record = world.hit(ray, 0.00001, 5000.0)
-    if hit:
-        absorbed, surface_colour, scattered_ray = hit_record.material.scatter(
-            ray,
-            hit_record
-        )
-        if not absorbed:
-            return surface_colour * get_ray_colour(scattered_ray, world, depth - 1)
-        else:
-            return surface_colour
-
-    else:
-        # Y component is somewhere between -1 and 1. Map it into
-        # a 0 to 1 range.
-        t = 0.5 * (ray.direction[1] + 1.0)
-
-        # Lerp between white and blue based on mapped Y
-        return (1.0 - t) * HORIZON_COLOUR + t * SKY_COLOUR
-
-
 def main():
     print("Start render")
-    # img_data = render()
-    img_data = numpy_bounce_render()
+    img_data = render()
     print("End render")
     generate_image_from_data(img_data)
 

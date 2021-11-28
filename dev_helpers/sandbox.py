@@ -21,14 +21,12 @@ sys.path.append(os.path.abspath("../src"))
 
 from weekend_raytracer import (
     main,
-    mttriangle_group,
+    triangle_group,
     obj_tri_mesh,
-    sphere_group_ray_group,
-    sphere, sphere_group,
+    sphere_group,
     ray,
     renderable,
     materials,
-    mttriangle_group_ray_group
 )
 
 
@@ -559,7 +557,7 @@ def mttri_grp_test():
         ],
     ]
 
-    grp = mttriangle_group.MTTriangleGroup()
+    grp = triangle_group.TriangleGroup()
     for triangle in triangles:
         grp.add_triangle(
             numpy.array(triangle[0]),
@@ -1605,7 +1603,7 @@ def dielectric_comparison():
     # for i in range(25):
     #     ray_dirs.append([0, 0, -1])
 
-    sphere_ray_group = sphere_group_ray_group.SphereGroupRayGroup()
+    sphere_ray_group = sphere_group.SphereGroup()
 
     # At origin, radius 3
     sphere_ray_group.add_sphere(
@@ -2281,7 +2279,7 @@ def texture_test():
 
 
 def uv_interpolate_test():
-    tri_grp = mttriangle_group_ray_group.MTTriangleGroupRayGroup(0)
+    tri_grp = triangle_group.TriangleGroup(0)
     # tri_grp.add_triangle(
     #     numpy.array([0, 0, 1], dtype=numpy.single),
     #     numpy.array([1, 0, 1], dtype=numpy.single),
