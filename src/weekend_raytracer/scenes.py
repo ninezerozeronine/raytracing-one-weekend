@@ -18,21 +18,21 @@ def numpy_bunnies_scene(aspect_ratio):
     horizontal_fov = 60.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    ground_mat = materials.CheckerboardDiffuse(
         numpy.array([1.0, 1.0, 1.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([0.5, 0.5, 0.5]),
         numpy.array([0.3, 0.3, 0.3]),
     )
-    red_blue_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    red_blue_mat = materials.CheckerboardDiffuse(
         numpy.array([2.0, 2.0, 2.0]),
         numpy.array([0.2, 0.2, 0.2]),
         numpy.array([0.7, 0.3, 0.2]),
         numpy.array([0.1, 0.2, 0.5]),
     )
-    metal_mat = materials.NumpyMetalMaterial(numpy.array([0.8, 0.8, 0.8]), 0.0)
-    glass_mat = materials.NumpyDielectricMaterial(1.5)
-    normal_mat = materials.NumpyNormalToRGBMaterial()
+    metal_mat = materials.Metal(numpy.array([0.8, 0.8, 0.8]), 0.0)
+    glass_mat = materials.Dielectric(1.5)
+    normal_mat = materials.NormalToRGBDiffuse()
 
     material_map = {
         0: ground_mat,
@@ -203,13 +203,13 @@ def numpy_cow_scene(aspect_ratio):
     horizontal_fov = 60.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    ground_mat = materials.CheckerboardDiffuse(
         numpy.array([1.0, 1.0, 1.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([0.2, 0.7, 0.3]),
         numpy.array([0.1, 0.9, 0.2]),
     )
-    black_white_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    black_white_mat = materials.CheckerboardDiffuse(
         numpy.array([1.0, 1.0, 1.0]),
         numpy.array([0.2, 0.2, 0.2]),
         numpy.array([0.8, 0.8, 0.85]),
@@ -281,15 +281,15 @@ def numpy_one_weekend_demo_scene(aspect_ratio):
     aperture = 0.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, 30.0)
 
-    gray_diffuse_mat = materials.NumpyPointOnHemiSphereMaterial(
+    gray_diffuse_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
-    metal_mat = materials.NumpyMetalMaterial(
+    metal_mat = materials.Metal(
         numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
         0.0
     )
-    glass_mat = materials.NumpyDielectricMaterial(1.5)
-    discrete_rgb_mat = materials.NumpyNormalToDiscreteRGBMaterial()
+    glass_mat = materials.Dielectric(1.5)
+    discrete_rgb_mat = materials.NormalToDiscreteRGBDiffuse()
 
     material_map = {
         0: gray_diffuse_mat,
@@ -368,18 +368,18 @@ def numpy_glass_experiment_scene(aspect_ratio):
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, 90.0)
 
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([(148/256), (116/256), (105/256)], dtype=numpy.single)
     )
-    blue_mat = materials.NumpyPointOnHemiSphereMaterial(
+    blue_mat = materials.Diffuse(
         numpy.array([0.1, 0.2, 0.5], dtype=numpy.single)
     )
-    discrete_normal_mat = materials.NumpyNormalToDiscreteRGBMaterial()
-    metal_mat = materials.NumpyMetalMaterial(
+    discrete_normal_mat = materials.NormalToDiscreteRGBDiffuse()
+    metal_mat = materials.Metal(
         numpy.array([0.8, 0.8, 0.8], dtype=numpy.single),
         0.0
     )
-    glass_mat = materials.NumpyDielectricMaterial(1.5)
+    glass_mat = materials.Dielectric(1.5)
 
     material_map = {
         0: ground_mat,
@@ -462,7 +462,7 @@ def numpy_triangles_scene(aspect_ratio):
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
 
@@ -515,10 +515,10 @@ def numpy_simple_sphere_scene(aspect_ratio):
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
-    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    checker_mat = materials.CheckerboardDiffuse(
         numpy.array([2, 2, 2], dtype=numpy.single),
         numpy.array([0, 0, 0], dtype=numpy.single),
         numpy.array([0.5, 0.8, 0.5], dtype=numpy.single),
@@ -570,26 +570,26 @@ def ray_group_triangle_group_bunny_scene(aspect_ratio):
     horizontal_fov = 53.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    # ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    # ground_mat = materials.Diffuse(
     #     numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     # )
 
-    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    ground_mat = materials.CheckerboardDiffuse(
         numpy.array([2.0, 2.0, 2.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([0.5, 0.5, 0.5]),
         numpy.array([0.8, 0.8, 0.8]),
     )
 
-    bunny_mat = materials.NumpyPointOnHemiSphereMaterial(
+    bunny_mat = materials.Diffuse(
         numpy.array([0.2, 0.7, 0.1], dtype=numpy.single)
     )
-    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+    tex_mat = materials.TexturedDiffuse(
         "bunnyTexture.tif"
         # "horizontalLineStrengthMap.jpg"
         # "flagTexture.tif"
     )
-    metal_mat = materials.NumpyMetalMaterial(
+    metal_mat = materials.Metal(
         numpy.array([0.8, 0.8, 0.8], dtype=numpy.single),
         0.0
     )
@@ -671,11 +671,11 @@ def texture_test_scene(aspect_ratio):
     horizontal_fov = 50.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
     # Test texture is from https://ue4techarts.com/2017/04/22/how-to-iterate-textures-in-an-atlas-ue4/
-    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+    tex_mat = materials.TexturedDiffuse(
         # "bunnyTexture.tif"
         # "horizontalLineStrengthMap.jpg"
         # "flagTexture.tif"
@@ -755,16 +755,16 @@ def smooth_normal_test_scene(aspect_ratio):
     horizontal_fov = 50.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    ground_mat = materials.CheckerboardDiffuse(
         numpy.array([4.0, 4.0, 4.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([0.5, 0.5, 0.5]),
         numpy.array([0.8, 0.8, 0.8]),
     )
 
-    # normal_mat = materials.NumpyNormalToRGBMaterial()
+    # normal_mat = materials.NormalToRGBDiffuse()
 
-    metal_mat = materials.NumpyMetalMaterial(
+    metal_mat = materials.Metal(
         numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
         0.0
     )
@@ -831,20 +831,20 @@ def blender_cylinder_vert_normals_test_scene(aspect_ratio):
     horizontal_fov = 35.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
 
-    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    checker_mat = materials.CheckerboardDiffuse(
         numpy.array([4.0, 4.0, 4.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([1.0, 0.3, 0.3]),
         numpy.array([0.2, 1.0, 0.3]),
     )
 
-    normal_mat = materials.NumpyNormalToRGBMaterial()
+    normal_mat = materials.NormalToRGBDiffuse()
 
-    metal_mat = materials.NumpyMetalMaterial(
+    metal_mat = materials.Metal(
         numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
         0.0
     )
@@ -919,20 +919,20 @@ def sphere_types_test_scene(aspect_ratio):
     horizontal_fov = 50.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
 
-    checker_mat = materials.NumpyPointOnHemiSphereCheckerboardMaterial(
+    checker_mat = materials.CheckerboardDiffuse(
         numpy.array([4.0, 4.0, 4.0]),
         numpy.array([0.0, 0.0, 0.0]),
         numpy.array([1.0, 0.3, 0.3]),
         numpy.array([0.2, 1.0, 0.3]),
     )
 
-    normal_mat = materials.NumpyNormalToRGBMaterial()
+    normal_mat = materials.NormalToRGBDiffuse()
 
-    metal_mat = materials.NumpyMetalMaterial(
+    metal_mat = materials.Metal(
         numpy.array([0.9, 0.9, 0.9], dtype=numpy.single),
         0.0
     )
@@ -1014,17 +1014,17 @@ def disk_test_scene(aspect_ratio):
     horizontal_fov = 40.0
     camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, aspect_ratio, horizontal_fov)
 
-    ground_mat = materials.NumpyPointOnHemiSphereMaterial(
+    ground_mat = materials.Diffuse(
         numpy.array([0.5, 0.5, 0.5], dtype=numpy.single)
     )
-    green_mat = materials.NumpyPointOnHemiSphereMaterial(
+    green_mat = materials.Diffuse(
         numpy.array([0.3, 0.8, 0.1], dtype=numpy.single)
     )
-    red_mat = materials.NumpyPointOnHemiSphereMaterial(
+    red_mat = materials.Diffuse(
         numpy.array([0.8, 0.15, 0.2], dtype=numpy.single)
     )
     # Test texture is from https://ue4techarts.com/2017/04/22/how-to-iterate-textures-in-an-atlas-ue4/
-    tex_mat = materials.NumpyPointOnHemiSphereTextureMaterial(
+    tex_mat = materials.TexturedDiffuse(
         "uv_test.jpg"
     )
 

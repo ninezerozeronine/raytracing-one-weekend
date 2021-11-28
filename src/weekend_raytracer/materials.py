@@ -36,7 +36,7 @@ AXIS_COLOUR_PAIRS = [
 ]
 
 
-class NumpyPointOnHemiSphereMaterial():
+class Diffuse():
     """
     Scatter rays towards points on a hemisphere at the hit point.
 
@@ -82,7 +82,7 @@ class NumpyPointOnHemiSphereMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-class NumpyPointOnHemiSphereTextureMaterial():
+class TexturedDiffuse():
     def __init__(self, texture_path):
         """
         Initialise the object.
@@ -147,7 +147,7 @@ class NumpyPointOnHemiSphereTextureMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-class NumpyPointOnHemiSphereCheckerboardMaterial():
+class CheckerboardDiffuse():
     def __init__(self, scale, offset, colour_a, colour_b):
         """
         Initialise the object.
@@ -187,7 +187,7 @@ class NumpyPointOnHemiSphereCheckerboardMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-class NumpyNormalToRGBMaterial():
+class NormalToRGBDiffuse():
     """
     Colour the surface based on the world normal at that
     point.
@@ -211,7 +211,7 @@ class NumpyNormalToRGBMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-class NumpyNormalToDiscreteRGBMaterial():
+class NormalToDiscreteRGBDiffuse():
     """
     Colour the surface based on the discretised world normal at that
     point.
@@ -238,7 +238,7 @@ class NumpyNormalToDiscreteRGBMaterial():
         return hit_points, ray_dirs, hit_cols, absorbtions
 
 
-class NumpyMetalMaterial():
+class Metal():
     """
     Reflect rays that hit the material.
 
@@ -299,7 +299,7 @@ class NumpyMetalMaterial():
         return hit_points, reflected_dirs, hit_cols, absorbtions
 
 
-class NumpyDielectricMaterial():
+class Dielectric():
     """
     A dielectic material description
     """
