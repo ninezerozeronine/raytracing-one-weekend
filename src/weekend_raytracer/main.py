@@ -14,8 +14,6 @@ import humanize
 from .ray import Ray
 from .renderable import World
 from .sphere_group import SphereGroup
-from .mttriangle import MTTriangle
-from .mttriangle_group import MTTriangleGroup
 from .mttriangle_group_ray_group import MTTriangleGroupRayGroup
 from .disk import Disk
 from .obj_tri_mesh import OBJTriMesh
@@ -1026,56 +1024,6 @@ def numpy_simple_sphere_scene():
     )
 
     return camera, [sphere_group], material_map
-
-
-def non_numpy_triangle_noise_cmp_scene():
-    cam_pos = numpy.array([0.0, 1.0, 6.0])
-    cam_lookat = numpy.array([0.0, 0.5, 0.0])
-    # cam_pos = numpy.array([5.0, 5.0, 5.0])
-    # cam_lookat = numpy.array([0.0, 0.5, 0.0])
-    focus_dist = 10
-    aperture = 0.0
-    horizontal_fov = 50.0
-    camera = Camera(cam_pos, cam_lookat, focus_dist, aperture, ASPECT_RATIO, horizontal_fov)
-
-    ground_mat = materials.PointOnHemiSphereMaterial(numpy.array([0.5, 0.5, 0.5]))
-
-    world = World()
-
-    # Blue triangle
-    world.renderables.append(MTTriangle(
-        numpy.array([1.0, 0.0, 0.0]),
-        numpy.array([2.0, 0.0, 0.0]),
-        numpy.array([1.0, 2.0, 0.0]),
-        ground_mat
-    ))
-
-    # Green triangle
-    world.renderables.append(MTTriangle(
-        numpy.array([-2.5, 0.0, 0.0]),
-        numpy.array([-1.5, 0.0, 0.0]),
-        numpy.array([-2.0, 0.75, 0.0]),
-        ground_mat
-    ))
-
-    # Mirror triangle
-    offset = numpy.array([0.0, 0.0, -2.0])
-    world.renderables.append(MTTriangle(
-        numpy.array([-2.0, 0.0, -1.0]) + offset,
-        numpy.array([2.0, 0.0, 1.0]) + offset,
-        numpy.array([0.0, 2.0, 0.0]) + offset,
-        ground_mat
-    ))
-
-    # Ground triangle
-    world.renderables.append(MTTriangle(
-        numpy.array([-200, 0, 200], dtype=numpy.single),
-        numpy.array([200, 0, 200], dtype=numpy.single),
-        numpy.array([0, 0, -200], dtype=numpy.single),
-        ground_mat
-    ))
-
-    return world, camera
 
 
 def ray_group_triangle_group_bunny_scene():

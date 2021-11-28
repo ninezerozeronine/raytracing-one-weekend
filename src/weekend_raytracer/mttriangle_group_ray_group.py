@@ -161,6 +161,9 @@ class MTTriangleGroupRayGroup():
         Hs = numpy.einsum("ij,ij->i", ray_dirs, C_to_Os)
         Cs = numpy.einsum("ij,ij->i", C_to_Os, C_to_Os) - self.bounds_radius**2
         discriminants = Hs**2 - Cs
+
+        # This isn't correct! Need to calculate the T values
+        # otherwise we might be hitting a sphere behind the ray.
         sphere_hits = discriminants > 0.0001
         num_sphere_hits = numpy.sum(sphere_hits)
 
@@ -265,6 +268,11 @@ class MTTriangleGroupRayGroup():
 
     def _get_hits(self, ray_origins, ray_dirs, t_min, t_max):
 
+        # This is more or less magic which I don't understand - there's
+        # lots of detail in the scratachapixel article about how this
+        # relates to transforming the triangle into barycentric
+        # coordinate space and calculating matrix determinants - all
+        # very fancy.
         num_rays = ray_origins.shape[0]
 
         mem_info = psutil.virtual_memory()
