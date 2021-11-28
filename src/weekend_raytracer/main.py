@@ -14,7 +14,7 @@ import humanize
 from .ray import Ray
 from .renderable import World
 from .sphere_group import SphereGroup
-from .mttriangle_group_ray_group import MTTriangleGroupRayGroup
+from .triangle_group import TriangleGroup
 from .disk import Disk
 from .obj_tri_mesh import OBJTriMesh
 from .camera import Camera
@@ -527,7 +527,7 @@ def numpy_bunnies_scene():
     spacing = 2.0
 
     # Metal bunny
-    metal_grp = MTTriangleGroupRayGroup(2)
+    metal_grp = TriangleGroup(2)
     offset_x = -spacing
     offset_z = -spacing
     for triangle in obj_mesh.faces:
@@ -559,7 +559,7 @@ def numpy_bunnies_scene():
         )
 
     # Glass bunny
-    glass_grp = MTTriangleGroupRayGroup(3)
+    glass_grp = TriangleGroup(3)
     offset_x = spacing
     offset_z = spacing
     for triangle in obj_mesh.faces:
@@ -591,7 +591,7 @@ def numpy_bunnies_scene():
         )
 
     # Red/blue bunny
-    red_blue_grp = MTTriangleGroupRayGroup(1)
+    red_blue_grp = TriangleGroup(1)
     offset_x = -spacing
     offset_z = spacing
     for triangle in obj_mesh.faces:
@@ -624,7 +624,7 @@ def numpy_bunnies_scene():
 
 
     # Normal bunny
-    normal_grp = MTTriangleGroupRayGroup(4)
+    normal_grp = TriangleGroup(4)
     offset_x = spacing
     offset_z = -spacing
     for triangle in obj_mesh.faces:
@@ -706,7 +706,7 @@ def numpy_cow_scene():
     spacing = 2.0
 
     # Metal bunny
-    cow_grp = MTTriangleGroupRayGroup(1)
+    cow_grp = TriangleGroup(1)
     for triangle in obj_mesh.faces:
         cow_grp.add_triangle(
             numpy.array(
@@ -936,7 +936,7 @@ def numpy_triangles_scene():
         0: ground_mat,
     }
 
-    tri_grp = MTTriangleGroupRayGroup(0)
+    tri_grp = TriangleGroup(0)
 
     # Blue triangle
     tri_grp.add_triangle(
@@ -1066,7 +1066,7 @@ def ray_group_triangle_group_bunny_scene():
         2: metal_mat,
     }
 
-    tri_grp = MTTriangleGroupRayGroup(2)
+    tri_grp = TriangleGroup(2)
 
     # Ground triangle
     # tri_grp.add_triangle(
@@ -1153,7 +1153,7 @@ def texture_test_scene():
         1: tex_mat,
     }
 
-    tri_grp = MTTriangleGroupRayGroup(1)
+    tri_grp = TriangleGroup(1)
 
     obj_mesh = OBJTriMesh()
     obj_mesh.read("square.obj")
@@ -1240,7 +1240,7 @@ def smooth_normal_test_scene():
         1: metal_mat,
     }
 
-    tri_grp = MTTriangleGroupRayGroup(1)
+    tri_grp = TriangleGroup(1)
 
     obj_mesh = OBJTriMesh()
     obj_mesh.read("angled_tris_standing.obj")
@@ -1322,7 +1322,7 @@ def blender_cylinder_vert_normals_test_scene():
         3: normal_mat
     }
 
-    tri_grp = MTTriangleGroupRayGroup(2)
+    tri_grp = TriangleGroup(2)
 
     obj_mesh = OBJTriMesh()
     obj_mesh.read("cylinder_smooth.obj")
@@ -1340,7 +1340,7 @@ def blender_cylinder_vert_normals_test_scene():
             normal2=numpy.array(obj_mesh.vertex_normals[triangle[2][2]])
         )
 
-    tri_grp2 = MTTriangleGroupRayGroup(2)
+    tri_grp2 = TriangleGroup(2)
 
     obj_mesh2 = OBJTriMesh()
     obj_mesh2.read("cylinder_faceted.obj")
@@ -1410,7 +1410,7 @@ def sphere_types_test_scene():
         3: normal_mat
     }
 
-    smooth_icosphere = MTTriangleGroupRayGroup(2)
+    smooth_icosphere = TriangleGroup(2)
 
     obj_mesh = OBJTriMesh()
     obj_mesh.read("smooth-icosphere.obj")
@@ -1428,7 +1428,7 @@ def sphere_types_test_scene():
             normal2=numpy.array(obj_mesh.vertex_normals[triangle[2][2]])
         )
 
-    faceted_icosphere = MTTriangleGroupRayGroup(2)
+    faceted_icosphere = TriangleGroup(2)
 
     obj_mesh2 = OBJTriMesh()
     obj_mesh2.read("faceted-icosphere.obj")

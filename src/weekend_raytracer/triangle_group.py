@@ -7,7 +7,7 @@ import humanize
 from . import renderable
 
 
-class MTTriangleGroupRayGroup():
+class TriangleGroup():
     r"""
     This is a direct implementation of The Muller-Tumbore Algoritm as descibed
     in https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection    
