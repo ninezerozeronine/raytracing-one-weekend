@@ -21,10 +21,11 @@ This some text with an inline bit of maths in it, are you ready? Here
 it comes :math:`\frac{ \sum_{t=0}^{N}f(t,k) }{N}` and now we carry on
 as if nothing happened.
 
+:math:`\vec{R}` is the vector from the centre (:math:`C`) to a point (:math:`P`) // To travel from the centre to a point we first go from the centre to the origin (:math:`- C`), then from the origin to the point (:math:`+ P`)) - the terms are re-arragend to make things look a little nicer. 
 
 If :math:`\vec{R}` is the vector from the center to a point on the sphere, and :math:`r` is the radius then if :math:`\vec{R} \odot \vec{R} = r^2` the point is on the sphere.
 
-:math:`\vec{R}` is the vector from the centre (:math:`C`) to a point (:math:`P`) this means :math:`\vec{R} = P - C`. To travel from the centre to a point we first go from the centre to the origin (:math:`- C`), then from the origin to the point (:math:`+ P`)) - the terms are re-arragend to make things look a little nicer.
+
 
 
 Everyone loves the quadratic equation!
