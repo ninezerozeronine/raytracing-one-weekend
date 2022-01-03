@@ -24,8 +24,6 @@ from weekend_raytracer import (
     triangle_group,
     obj_tri_mesh,
     sphere_group,
-    ray,
-    renderable,
     materials,
 )
 

@@ -1,15 +1,12 @@
 """
 Materials for the objects in a scene.
-
-(As per the renderable we don't use a base class because that slows down execution)
 """
+
 import random
 import math
 
 import numpy
 from PIL import Image
-
-from . import renderable
 
 
 
