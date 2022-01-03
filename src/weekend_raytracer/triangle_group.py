@@ -479,7 +479,8 @@ class TriangleGroup():
 
         hit_material_ids = numpy.full((num_rays), self.material_id, dtype=numpy.ubyte)
 
-        return RayResults(
+        res = RayResults()
+        res.set(
             ray_hits,
             final_ts,
             hit_points,
@@ -488,3 +489,4 @@ class TriangleGroup():
             hit_material_ids,
             back_facing
         )
+        return res

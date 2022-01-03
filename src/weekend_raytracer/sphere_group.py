@@ -275,7 +275,8 @@ class SphereGroup():
             -1
         )
 
-        return RayResults(
+        res = RayResults()
+        res.set(
             ray_hits,
             final_ts,
             hit_points,
@@ -284,3 +285,4 @@ class SphereGroup():
             hit_material_indecies,
             back_facing
         )
+        return res

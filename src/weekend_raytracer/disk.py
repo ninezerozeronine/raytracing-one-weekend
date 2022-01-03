@@ -94,7 +94,8 @@ class Disk():
         # faces the ray origin
         hit_normals[back_facing] *= -1.0
 
-        return RayResults(
+        res = RayResults()
+        res.set(
             hits,
             ts,
             hit_pts,
@@ -103,3 +104,4 @@ class Disk():
             hit_material_indecies,
             back_facing
         )
+        return res

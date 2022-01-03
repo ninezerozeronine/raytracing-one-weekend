@@ -21,6 +21,19 @@ class RayResults():
         self.material_ids = None
         self.back_facing = None
 
+    def set(self, hits, ts, pts, normals, uvs, material_ids, back_facing):
+        """
+        Set the data from existing results
+        """
+        self.hits = hits
+        self.ts = ts
+        self.pts = pts
+        self.normals = normals
+        self.uvs = uvs
+        self.material_ids = material_ids
+        self.back_facing = back_facing
+
+
     def set_blank(self, num_results, t_value, material_id):
         """
         Set the results to a blank/null dataset.
