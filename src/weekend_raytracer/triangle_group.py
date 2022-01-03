@@ -4,8 +4,6 @@ import numpy
 import psutil
 import humanize
 
-from . import renderable
-
 
 class TriangleGroup():
     r"""
