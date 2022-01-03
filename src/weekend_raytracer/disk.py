@@ -4,6 +4,9 @@ A circular disk
 
 import numpy
 
+from .ray_results import RayResults
+
+
 class Disk():
     """
     A circular disk
@@ -91,4 +94,12 @@ class Disk():
         # faces the ray origin
         hit_normals[back_facing] *= -1.0
 
-        return hits, ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
+        return RayResults(
+            hits,
+            ts,
+            hit_pts,
+            hit_normals,
+            hit_uvs,
+            hit_material_indecies,
+            back_facing
+        )
