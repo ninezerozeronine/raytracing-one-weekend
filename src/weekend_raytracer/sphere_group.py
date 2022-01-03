@@ -7,6 +7,8 @@ import numpy
 import psutil
 import humanize
 
+from .ray_results import RayResults
+
 class SphereGroup():
     """
     Note that we don't use a base class because that slows things down.
@@ -80,46 +82,61 @@ class SphereGroup():
         ray_dirs_chunks = numpy.array_split(ray_dirs, num_chunks)
 
         print(f"Chunk 1 of {num_chunks}")
-        (
-            ray_hits,
-            hit_ts,
-            hit_pts,
-            hit_normals,
-            hit_uvs,
-            hit_material_indecies,
-            back_facing
-        ) = self._get_hits(
+        ray_results = self._get_hits(
             ray_origins_chunks[0],
             ray_dirs_chunks[0],
             t_min,
             t_max
         )
+        # (
+        #     ray_hits,
+        #     hit_ts,
+        #     hit_pts,
+        #     hit_normals,
+        #     hit_uvs,
+        #     hit_material_indecies,
+        #     back_facing
+        # ) = self._get_hits(
+        #     ray_origins_chunks[0],
+        #     ray_dirs_chunks[0],
+        #     t_min,
+        #     t_max
+        # )
 
         for chunk_index in range(1, num_chunks):
             print(f"Chunk {chunk_index + 1} of {num_chunks}")
-            (
-                ray_hits_chunk,
-                hit_ts_chunk,
-                hit_pts_chunk,
-                hit_normals_chunk,
-                hit_uvs_chunk,
-                hit_material_indecies_chunk,
-                back_facing_chunk
-            ) = self._get_hits(
+            chunk_results = self._get_hits(
                 ray_origins_chunks[chunk_index],
                 ray_dirs_chunks[chunk_index],
                 t_min,
                 t_max
             )
-            ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
-            hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
-            hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
-            hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
-            hit_uvs = numpy.concatenate((hit_uvs, hit_uvs_chunk), axis=0)
-            hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
-            back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
+            # (
+            #     ray_hits_chunk,
+            #     hit_ts_chunk,
+            #     hit_pts_chunk,
+            #     hit_normals_chunk,
+            #     hit_uvs_chunk,
+            #     hit_material_indecies_chunk,
+            #     back_facing_chunk
+            # ) = self._get_hits(
+            #     ray_origins_chunks[chunk_index],
+            #     ray_dirs_chunks[chunk_index],
+            #     t_min,
+            #     t_max
+            # )
 
-        return ray_hits, hit_ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
+            ray_results.concatenate(chunk_results)
+            # ray_hits = numpy.concatenate((ray_hits, ray_hits_chunk), axis=0)
+            # hit_ts = numpy.concatenate((hit_ts, hit_ts_chunk), axis=0)
+            # hit_pts = numpy.concatenate((hit_pts, hit_pts_chunk), axis=0)
+            # hit_normals = numpy.concatenate((hit_normals, hit_normals_chunk), axis=0)
+            # hit_uvs = numpy.concatenate((hit_uvs, hit_uvs_chunk), axis=0)
+            # hit_material_indecies = numpy.concatenate((hit_material_indecies, hit_material_indecies_chunk), axis=0)
+            # back_facing = numpy.concatenate((back_facing, back_facing_chunk), axis=0)
+
+        return ray_results
+        # return ray_hits, hit_ts, hit_pts, hit_normals, hit_uvs, hit_material_indecies, back_facing
 
     def _get_hits(self, ray_origins, ray_dirs, t_min, t_max):
 
@@ -258,4 +275,12 @@ class SphereGroup():
             -1
         )
 
-        return ray_hits, final_ts, hit_points, hit_normals, hit_uvs, hit_material_indecies, back_facing
+        return RayResults(
+            ray_hits,
+            final_ts,
+            hit_points,
+            hit_normals,
+            hit_uvs,
+            hit_material_indecies,
+            back_facing
+        )
