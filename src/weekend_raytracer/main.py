@@ -12,6 +12,7 @@ import numpy
 import humanize
 
 from . import scenes
+from .ray_results import RayResults
 
 IMG_WIDTH = 160
 IMG_HEIGHT = 90
@@ -113,64 +114,84 @@ def render():
         if bounce != MAX_BOUNCES:
 
             num_rays = active_ray_indecies.shape[0]
-            ray_hits = numpy.full((num_rays,), False)
-            hit_ts = numpy.full((num_rays,), 5001.0)
-            hit_pts = numpy.full((num_rays, 3), 0.0)
-            hit_normals = numpy.full((num_rays, 3), 0.0)
-            hit_uvs = numpy.full((num_rays, 2), 0.0)
-            hit_material_indecies = numpy.full((num_rays,), -1, dtype=numpy.ubyte)
-            back_facing = numpy.full((num_rays,), False)
+
+            ray_results = RayResults()
+            ray_results.set_blank(num_rays, 1001.0, -1)
+            # ray_hits = numpy.full((num_rays,), False)
+            # hit_ts = numpy.full((num_rays,), 5001.0)
+            # hit_pts = numpy.full((num_rays, 3), 0.0)
+            # hit_normals = numpy.full((num_rays, 3), 0.0)
+            # hit_uvs = numpy.full((num_rays, 2), 0.0)
+            # hit_material_indecies = numpy.full((num_rays,), -1, dtype=numpy.ubyte)
+            # back_facing = numpy.full((num_rays,), False)
 
             for object_group in object_groups:
 
-                # Eeeeew - this is getting a bit out of hand :(
-                # Also need to catch the case where there are no hits.
-                (
-                    tmp_ray_hits,
-                    tmp_hit_ts,
-                    tmp_hit_pts,
-                    tmp_hit_normals,
-                    tmp_hit_uvs,
-                    tmp_hit_material_indecies,
-                    tmp_back_facing
-                ) = object_group.get_hits(
+                # Need to catch the case where there are no hits.
+                object_results = object_group.get_hits(
                     ray_origins[active_ray_indecies],
                     ray_directions[active_ray_indecies],
                     0.001,
                     1000.0
                 )
 
-                ray_hits = ray_hits | tmp_ray_hits
-                condition = tmp_ray_hits & (tmp_hit_ts < hit_ts)
-                hit_ts = numpy.where(
-                    condition,
-                    tmp_hit_ts,
-                    hit_ts
-                )
-                hit_pts = numpy.where(
-                    condition[..., numpy.newaxis],
-                    tmp_hit_pts,
-                    hit_pts
-                )
-                hit_normals = numpy.where(
-                    condition[..., numpy.newaxis],
-                    tmp_hit_normals,
-                    hit_normals
-                )
-                hit_uvs = numpy.where(
-                    condition[..., numpy.newaxis],
-                    tmp_hit_uvs,
-                    hit_uvs)
-                hit_material_indecies = numpy.where(
-                    condition,
-                    tmp_hit_material_indecies,
-                    hit_material_indecies
-                )
-                back_facing = numpy.where(
-                    condition,
-                    tmp_back_facing,
-                    back_facing
-                )
+                # Eeeeew - this is getting a bit out of hand :(
+                # Also need to catch the case where there are no hits.
+                # (
+                #     tmp_ray_hits,
+                #     tmp_hit_ts,
+                #     tmp_hit_pts,
+                #     tmp_hit_normals,
+                #     tmp_hit_uvs,
+                #     tmp_hit_material_indecies,
+                #     tmp_back_facing
+                # ) = object_group.get_hits(
+                #     ray_origins[active_ray_indecies],
+                #     ray_directions[active_ray_indecies],
+                #     0.001,
+                #     1000.0
+                # )
+
+                ray_results.hits = ray_results.hits | object_results.hits
+                condition = object_results.hits & (object_results.ts < ray_results.ts)
+                # ray_hits = ray_hits | tmp_ray_hits
+                # condition = tmp_ray_hits & (tmp_hit_ts < hit_ts)
+
+                ray_results.ts[condition] = object_results.ts[condition]
+                ray_results.pts[condition] = object_results.pts[condition]
+                ray_results.normals[condition] = object_results.normals[condition]
+                ray_results.uvs[condition] = object_results.uvs[condition]
+                ray_results.material_ids[condition] = object_results.material_ids[condition]
+                ray_results.back_facing[condition] = object_results.back_facing[condition]
+                # hit_ts = numpy.where(
+                #     condition,
+                #     tmp_hit_ts,
+                #     hit_ts
+                # )
+                # hit_pts = numpy.where(
+                #     condition[..., numpy.newaxis],
+                #     tmp_hit_pts,
+                #     hit_pts
+                # )
+                # hit_normals = numpy.where(
+                #     condition[..., numpy.newaxis],
+                #     tmp_hit_normals,
+                #     hit_normals
+                # )
+                # hit_uvs = numpy.where(
+                #     condition[..., numpy.newaxis],
+                #     tmp_hit_uvs,
+                #     hit_uvs)
+                # hit_material_indecies = numpy.where(
+                #     condition,
+                #     tmp_hit_material_indecies,
+                #     hit_material_indecies
+                # )
+                # back_facing = numpy.where(
+                #     condition,
+                #     tmp_back_facing,
+                #     back_facing
+                # )
 
             # print(ray_hits.shape[0])
             # print(hit_ts.shape[0])
@@ -179,19 +200,19 @@ def render():
             # print(hit_material_indecies.shape[0])
             # print(back_facing.shape[0])
             # print(numpy.any(ray_hits))
-            ray_misses = numpy.logical_not(ray_hits)
+            ray_misses = numpy.logical_not(ray_results.hits)
 
-            material_absorbsions = numpy.full((ray_hits.shape[0]), False)
+            material_absorbsions = numpy.full((ray_results.hits.shape[0]), False)
 
             for material_index, material in material_map.items():
-                material_matches = (hit_material_indecies == material_index) & ray_hits
+                material_matches = (ray_results.material_ids == material_index) & ray_results.hits
 
                 scatter_ray_origins, scatter_ray_dirs, scatter_cols, scatter_absorbtions = material.scatter(
                     ray_directions[active_ray_indecies[material_matches]],
-                    hit_pts[material_matches],
-                    hit_normals[material_matches],
-                    hit_uvs[material_matches], 
-                    back_facing[material_matches]
+                    ray_results.pts[material_matches],
+                    ray_results.normals[material_matches],
+                    ray_results.uvs[material_matches], 
+                    ray_results.back_facing[material_matches]
                 )
 
                 ray_origins[active_ray_indecies[material_matches]] = scatter_ray_origins
@@ -207,7 +228,11 @@ def render():
             ray_colours[active_ray_indecies[ray_misses], bounce] = (1.0 - ts)[..., numpy.newaxis] * HORIZON_COLOUR + ts[..., numpy.newaxis] * SKY_COLOUR
 
             # The next round of rays are the ones that hit something and were not absorbed
-            active_ray_indecies = active_ray_indecies[numpy.logical_and(ray_hits, numpy.logical_not(material_absorbsions))]
+            active_ray_indecies = active_ray_indecies[
+                numpy.logical_and(
+                    ray_results.hits, numpy.logical_not(material_absorbsions)
+                )
+            ]
         else:
             ray_colours[active_ray_indecies, bounce] = 0.0
 
