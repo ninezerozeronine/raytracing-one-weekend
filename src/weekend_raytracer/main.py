@@ -99,7 +99,6 @@ def render():
 
     print("Filling ray arrays")
     ray_origins, ray_directions = camera.get_ray_components(IMG_WIDTH, IMG_HEIGHT, PIXEL_SAMPLES)
-    print
     ray_origins = ray_origins.reshape(-1, 3)
     ray_directions = ray_directions.reshape(-1, 3)
     ray_colours = ray_colours.reshape(-1, MAX_BOUNCES + 1, 3)

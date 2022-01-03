@@ -2,8 +2,6 @@ import math
 
 import numpy
 
-from .ray import Ray
-
 RNG = numpy.random.default_rng()
 
 

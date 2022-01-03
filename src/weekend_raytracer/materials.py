@@ -9,7 +9,6 @@ import math
 import numpy
 from PIL import Image
 
-from .ray import Ray
 from . import renderable
 
 
